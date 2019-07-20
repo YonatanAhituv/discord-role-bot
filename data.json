@@ -1,0 +1,91 @@
+{
+    // A discord bot token from the developer portal
+    "token": "",
+    // The name of the server the bot is running on (used for welcome messages)
+    "servername": "Example Server",
+    // The id of the admin to contact, you can get this by running the bot without it
+    // Then mentioning the admin you want to put in and then grabbing the number that shows up
+    // So @someone would show up something like <@000000000000000000>, 
+    // the zeros being the number you would put in beloww
+    "admintoken": "",
+    // Self explanatory, a no usage and time limit invite link
+    "serverinvite": "",
+    // The role to give a new player when assigning roles (should allow them to react to messages in the target channel below)
+    // And if you'd like, disable messaging in other channels since this role is assigned to new members as well
+    "newrole": "New Member",
+    "targetchannels": {
+        // Where to send complaints when a member types !complain
+        "complaints": "complaints",
+        // And where to ask people questions for role assignment
+        "welcome": "welcome"
+    },
+    "assignedroles": {
+        // This is a database of roles, just put anyones name in and a list of roles and it'll auto assign it
+        // Specifically on join, and when they type !roleassign
+        "Someone#12345": ["role 1", "role 2", "role 3"]
+    },
+    "questions": {
+        // This is the main part of the bot
+        // Role assignment questions
+        // The key below is not shown to the user and is just in the JSON,
+        // so don't worry about what it says, it's not a title
+        "unicoderolequestion": {
+            // This is the question that willl be asked
+            "question": "Example Question",
+            // There are two types of questions, role and action questions,
+            // action is pretty much just used as a continue or stop and will
+            // be talked about later, role is used to assign roles, of course
+            "type": "role",
+            // The bot can use both normal and custom emojis, unicode means you'd like
+            // to use normal emojis, so you can put just any standard emoji in,
+            // while custom is just server emojis if you'd like to add your own
+            "reactiontype": "unicode",
+            // These are the possible answers the user can respond with
+            // Of course, the bot will respond with these before hand,
+            // in order to make sure the user knows which ones it needs
+            // to respond with
+            "answers": ["👍", "👎"],
+            // Now, the location of the possible answers and the roles below
+            // need to match up, so for example if the user above responds with
+            // a thumbs up, since it's the first item in that list,
+            // It'll assign them the first item in this list below
+            // So the answers should always match up (locationally) with the roles
+            "roles": ["Example Role", "Example Role 2"]
+        },
+        "customrolequestion": {
+            // Same thing
+            "question": "Example Question 2",
+            // Same thing as well
+            "type": "role",
+            // This time custom reactiontype
+            "reactiontype" : "custom",
+            // Now instead of emojis, you just put in the custom emoji's name
+            // So for example if I had one that was called test, and you
+            // would just generally use it in the server as :test:,
+            // you would just simply type in test, so no colon
+            "answers": ["test", "test-2"],
+            // Same thing as above
+            "actions": ["Role 1", " Role 2"]
+        }
+        "actionquestion": {
+            // Same as earlier
+            "question": "Do you want to continue?",
+            // This time action type
+            "type": "action",
+            // Same as earlier
+            "reactiontype": "unicode",
+            // Same here too
+            "answers": ["👍", "👎"],
+            // Now, close just means to stop all the questions and finish, while nothing
+            // just means to continue, this is useful if you want to ask a set of follow up questions,
+            // Like, are you intrested in this? If no, close, if yes, put an empty string,
+            // then the later questions can ask for more info
+            "actions": ["", "close"]
+        }
+        // Now I've mainly used these role assignments to:
+        // A. Create private channels that people can get assigned to based on their intrests
+        // B. Create some sort of role that people can @ to ask them questions about the topic their role is setup for
+        // C. Create seperated areas on the member list, based off of peoples opinions and intrests
+        // But thats just some ideas, theres plenty of other things you can do
+    }
+}
