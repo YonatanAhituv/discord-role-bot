@@ -11,8 +11,8 @@ and even an anonymous complaints system.
 It's uses discord.py version 0.16.12, and works like any other python 
 script, so feel free to run it on Heroku, or on your own home server.
 #### What about the JSON?
-There are instructions on how to use the JSON in the data.json file
-that is in the repository, so feel free to modify the example code,
+There are instructions on how to use the JSON in the example.json file
+that is in the repository, so feel free to modify the example data,
 and read the comments inside to get a understanding of how it works.
 If you still need help, feel free to open an issue.
 
