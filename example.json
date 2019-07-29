@@ -13,6 +13,9 @@
     // The role to give a new player when assigning roles (should allow them to react to messages in the target channel below)
     // And if you'd like, disable messaging in other channels since this role is assigned to new members as well
     "newrole": "New Member",
+    // The role allowing a new member to send messages when asked a text based question, which isn't needed if you don't have
+    // any text based questions below
+    "textrole": "Text Role",
     "targetchannels": {
         // Where to send complaints when a member types !complain
         "complaints": "complaints",
@@ -81,6 +84,21 @@
             // Like, are you intrested in this? If no, close, if yes, put an empty string,
             // then the later questions can ask for more info
             "actions": ["", "close"]
+        },
+        "textquestion": {
+            // Same thing
+            "question": "Pick an option",
+            // Can be set as needed
+            "type": "role",
+            // Now reactiontype is text
+            "reactiontype": "text",
+            // Below you can put a list of answers that the bot will prompt foor
+            "answers": ["test1", "test2", "test3", "test4", "test5"],
+            // Now while roles can be used the exact same way here as above, (align the role with the answer's index)
+            // theres a more compact way to use it, in case the role names exactly match the answers,
+            // so by using 0 in roles, it'll just assign roles from the answers, so for example in this case,
+            // if someone were to pick test3, it would assign the role test3 without needing to duplicate it below
+            "roles": 0
         }
         // Now I've mainly used these role assignments to:
         // A. Create private channels that people can get assigned to based on their intrests

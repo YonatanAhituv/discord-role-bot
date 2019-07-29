@@ -190,6 +190,8 @@ class MyClient(discord.Client):
                 if data["questions"][name]["reactiontype"] == "text":
                     while True:
                         print("Getting user input...")
+                        role = discord.utils.get(member.server.roles, name=data["textrole"])
+                        await client.add_roles(member, role)
                         usermsg = await client.wait_for_message(author=member, timeout=120)
                         # print(str(usermsg.content))
                         if usermsg is None:
@@ -204,6 +206,8 @@ class MyClient(discord.Client):
                         for item in data["questions"][name]["answers"]:
                             loweranswers.append(item.lower())
                         if msgcontent.lower() in loweranswers:
+                            role = discord.utils.get(member.server.roles, name=data["textrole"])
+                            await client.remove_roles(member, role)
                             if data["questions"][name]["roles"] == 0:
                                 answerIndex = loweranswers.index(msgcontent.lower())
                                 print("Roles is set to 0")
