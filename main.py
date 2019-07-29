@@ -20,25 +20,34 @@ class MyClient(discord.Client):
         for items in data["questions"]:
             print(str(items))
             try:
-                for item in data["questions"][items]["roles"]:
+                if data["questions"][items]["roles"] == 0:
+                    rolelist = data["questions"][items]["answers"]
+                else:
+                    rolelist = data["questions"][items]["roles"]
+                for item in rolelist:
                     if item != "":
                         roles.append(item)
             except KeyError:
                 pass
         print(str(roles))
         print("Got list of all roles, and removing them from member now...")
-        for role in roles:
-            role = discord.utils.get(member.server.roles, name=role)
-            if role is not None:
-                await client.remove_roles(member, role)
+        rolestodelete = []
+        for role in member.roles:
+            if role.name in rolelist:
+                rolestodelete.append(role)
+        for role in rolestodelete:
+            await client.remove_roles(member, role)
         print("Done!")
 
     async def mute(self, member: discord.Member):
         global matchmaking
         matchmaking = True
-        await self.removebotroles(member)
         role = discord.utils.get(member.server.roles, name=data["newrole"])
         await client.add_roles(member, role)
+        try:
+            await self.removebotroles(member)
+        except:
+            matchmaking = False
 
     async def unmute(self, member: discord.Member):
         global matchmaking
@@ -80,17 +89,22 @@ class MyClient(discord.Client):
                     print("-" * len(str(complaintsChannel.id)))
                     print()
 
-    async def clean_list(self, finput):
+    async def clean_list(self, finput, newlines=False):
         print("Cleaning list...")
         output = ""
-        i = 0
-        while i != len(finput):
-            if i == len(finput) - 2:
-                output += finput[i] + ", and "
-            else:
-                output += finput[i] + ", "
-            i += 1
-        return output[:-2]
+        if not newlines:
+            i = 0
+            while i != len(finput):
+                if i == len(finput) - 2:
+                    output += finput[i] + ", and "
+                else:
+                    output += finput[i] + ", "
+                i += 1
+            return output[:-2]
+        else:
+            for item in finput:
+                output += item + "\n"
+            return output[:-1]
 
     async def on_message(self, message):
         global matchmaking
@@ -161,11 +175,54 @@ class MyClient(discord.Client):
         if not member.bot:
             totalquestions = len(data["questions"].keys())
             await self.mute(member)
+            if not matchmaking:
+                return
             welcomemsg = await client.send_message(targetChannel, member.mention + ", welcome to " + data["servername"] + ". In order to begin, please answer the following questions.")
             i = 1
             for name in data["questions"]:
-                em = discord.Embed(title="Question " + str(i) + "/" + str(totalquestions) + ":", description="\n" + data["questions"][name]["question"])
+                additions = ""
+                if data["questions"][name]["reactiontype"] == "text":
+                    optionlist = data["questions"][name]["answers"]
+                    optionlist = await self.clean_list(optionlist, newlines=True)
+                    additions = "\n\nPlease reply to the message with one of these options:\n" + optionlist
+                em = discord.Embed(title="Question " + str(i) + "/" + str(totalquestions) + ":", description="\n" + data["questions"][name]["question"] + additions)
                 msg = await client.send_message(targetChannel, embed=em)
+                if data["questions"][name]["reactiontype"] == "text":
+                    while True:
+                        print("Getting user input...")
+                        usermsg = await client.wait_for_message(author=member, timeout=120)
+                        # print(str(usermsg.content))
+                        if usermsg is None:
+                            print("Timed out")
+                            await client.send_message(member, "Timed out, rejoin " + data["servername"] + " to try again.")
+                            await client.send_message(member, data["serverinvite"])
+                            await client.delete_message(welcomemsg)
+                            await client.kick(member)
+                            break
+                        msgcontent = usermsg.content
+                        loweranswers = []
+                        for item in data["questions"][name]["answers"]:
+                            loweranswers.append(item.lower())
+                        if msgcontent.lower() in loweranswers:
+                            if data["questions"][name]["roles"] == 0:
+                                answerIndex = loweranswers.index(msgcontent.lower())
+                                print("Roles is set to 0")
+                                role = discord.utils.get(member.server.roles, name=data["questions"][name]["answers"][answerIndex])
+                                await client.add_roles(member, role)
+                                print("Role assigned")
+                                break
+                            else:
+                                answerIndex = loweranswers.index(msgcontent)
+                                role = discord.utils.get(member.server.roles, name=data["questions"][name]["roles"][answerIndex])
+                                await client.add_roles(member, role)
+                                break
+
+                    await client.delete_message(usermsg)
+                    await client.delete_message(msg)
+                    if msg is None:
+                        break
+                    i += 1
+                    continue
                 while True:
                     if data["questions"][name]["reactiontype"] == "custom":
                         emojis = []
