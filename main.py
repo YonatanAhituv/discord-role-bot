@@ -43,8 +43,8 @@ class MyClient(discord.Client):
         global matchmaking
         matchmaking = True
         role = discord.utils.get(member.server.roles, name=data["newrole"])
-        await client.add_roles(member, role)
         try:
+            await client.add_roles(member, role)
             await self.removebotroles(member)
         except:
             matchmaking = False
@@ -196,10 +196,11 @@ class MyClient(discord.Client):
                         # print(str(usermsg.content))
                         if usermsg is None:
                             print("Timed out")
-                            await client.send_message(member, "Timed out, rejoin " + data["servername"] + " to try again.")
-                            await client.send_message(member, data["serverinvite"])
+                            matchmaking = False
                             await client.delete_message(welcomemsg)
                             await client.kick(member)
+                            await client.send_message(member, "Timed out, rejoin " + data["servername"] + " to try again.")
+                            await client.send_message(member, data["serverinvite"])
                             break
                         msgcontent = usermsg.content
                         loweranswers = []
@@ -238,11 +239,12 @@ class MyClient(discord.Client):
                         await client.add_reaction(msg, emoji)
                     res = await client.wait_for_reaction(emojis, user=member, message=msg, timeout=120)
                     if res is None:
-                        await client.send_message(member, "Timed out, rejoin " + data["servername"] + " to try again.")
-                        await client.send_message(member, data["serverinvite"])
+                        matchmaking = False
                         await client.kick(member)
                         await client.delete_message(msg)
                         await client.delete_message(welcomemsg)
+                        await client.send_message(member, "Timed out, rejoin " + data["servername"] + " to try again.")
+                        await client.send_message(member, data["serverinvite"])
                         break
                     if data["questions"][name]["reactiontype"] == "custom":
                         res = res.reaction.emoji.name
