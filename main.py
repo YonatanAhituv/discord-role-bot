@@ -202,7 +202,7 @@ class MyClient(discord.Client):
                             usermsg = await client.wait_for('message', check=self.textcheck, timeout=120)
                         except asyncio.TimeoutError:
                             usermsg = None
-                        # print(str(usermsg.content))
+                        print("Recieved message: " + str(usermsg.content))
                         if usermsg is None:
                             print("Timed out")
                             matchmaking = False
@@ -214,6 +214,10 @@ class MyClient(discord.Client):
                                 pass
                             await member.kick()
                             break
+                        try:
+                            await usermsg.delete()
+                        except discord.errors.NotFound:
+                            pass
                         msgcontent = usermsg.content
                         loweranswers = []
                         for item in data["questions"][name]["answers"]:
@@ -237,7 +241,6 @@ class MyClient(discord.Client):
                     if usermsg is None:
                         msg = usermsg
                         break
-                    await usermsg.delete()
                     i += 1
                     continue
                 while True:
