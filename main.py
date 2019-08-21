@@ -95,23 +95,26 @@ class MyClient(discord.Client):
         for msg in msglist:
             print(msg)
         print("-" * highestlen)
-        if message.content == "!matchmake":
-            await message.delete()
-            if not matchmaking:
-                statusmsg = await message.channel.send(content="Matchmaking " + message.author.mention + "...")
-                await self.matchmake(message.author)
-                await statusmsg.delete()
+        if "new member" not in [role.name.lower() for role in message.author.roles]:
+            if message.content == "!matchmake":
+                await message.delete()
+                if not matchmaking:
+                    statusmsg = await message.channel.send(content="Matchmaking " + message.author.mention + "...")
+                    await self.matchmake(message.author)
+                    await statusmsg.delete()
+                else:
+                    em = discord.Embed(title="ERROR", description="\nAlready matchmaking someone else, please try again soon!")
+                    statusmsg = await message.channel.send(embed=em)
+                    sleep(2)
+                    await statusmsg.delete()
+            elif message.content == "!roleassign":
+                await self.roleassign(message=message)
             else:
-                em = discord.Embed(title="ERROR", description="\nAlready matchmaking someone else, please try again soon!")
-                statusmsg = await message.channel.send(embed=em)
-                sleep(2)
-                await statusmsg.delete()
-        elif message.content == "!roleassign":
-            await self.roleassign(message=message)
+                msglist = message.content.split()
+                if len(msglist) > 0 and msglist[0] == "!complain":
+                    await self.complain(message)
         else:
-            msglist = message.content.split()
-            if len(msglist) > 0 and msglist[0] == "!complain":
-                await self.complain(message)
+            await message.delete()
 
     async def complain(self, message):
         complaint = message.content.replace("!complain ", "")
