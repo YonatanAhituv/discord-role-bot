@@ -8,7 +8,7 @@ roles based off that, it has a role database that will assign roles,
 and even an anonymous complaints system.
 
 ### How do I use it?
-It's uses discord.py version 0.16.12, and works like any other python 
+It's uses the latest version of discord.py, and works like any other python 
 script, so feel free to run it on Heroku, or on your own home server.
 #### What about the JSON?
 There are instructions on how to use the JSON in the example.json file
