@@ -108,6 +108,7 @@ class MyClient(discord.Client):
                     sleep(2)
                     await statusmsg.delete()
             elif message.content == "!roleassign":
+                await message.delete()
                 await self.roleassign(message=message)
             else:
                 msglist = message.content.split()
@@ -141,7 +142,9 @@ class MyClient(discord.Client):
                 rolelist = data["assignedroles"][membername]
                 rolelist = await self.clean_list(rolelist)
                 em = discord.Embed(title="Success", description="\nAssigned the following roles: " + rolelist + ".")
-                await message.channel.send(embed=em)
+                msg = await message.channel.send(embed=em)
+                sleep(2)
+                await msg.delete()
         else:
             if message is not None:
                 await message.channel.send("Failed to assign roles, please contact " + "<@" + data["admintoken"] + "> to fix this.")
