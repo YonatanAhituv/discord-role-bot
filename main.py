@@ -2,11 +2,15 @@ import discord
 import asyncio
 import json
 from time import sleep
+from colorama import init
+from colorama import Fore, Style
 
 with open('data.json', 'r') as datafile:
     data = json.loads(datafile.read())
 
 token = data["token"]
+
+init()
 
 global targetChannel
 
@@ -35,14 +39,35 @@ class MyClient(discord.Client):
         role = discord.utils.get(member.guild.roles, name=data["newrole"])
         await member.remove_roles(role)
 
+    async def emoji_count(self, text):
+        emojicount = 0
+        for char in text:
+            isascii = lambda s: len(s) == len(s.encode())
+            if not isascii(char):
+                emojicount += 1
+        return emojicount
+
+    async def log(self, info):
+        infolist = info.split('\n')
+        length = 0
+        finalinfo = ""
+        for item in infolist:
+            if len(item) > length:
+                length = len(item)
+        for item in infolist:
+            emojiCount = await self.emoji_count(item)
+            spaceLength = (length - len(item) - emojiCount)
+            finalinfo = finalinfo + Fore.BLUE + "│ " + Style.RESET_ALL + item + " " + Fore.BLUE + " " * spaceLength + "│" + Style.RESET_ALL + "\n"
+        finalinfo = finalinfo[:-1]
+        info = finalinfo
+        print(Fore.BLUE + "┌─" + "─" * int(length) + "─┐" + Style.RESET_ALL)
+        print(str(info) + Style.RESET_ALL)
+        print(Fore.BLUE + "└" + "─" * int(length) + "──┘" + Style.RESET_ALL)
+        print()
+
     async def on_ready(self):
         print()
-        print('-' * len(str(self.user.id)))
-        print('Logged in as')
-        print(self.user.name)
-        print(self.user.id)
-        print('-' * len(str(self.user.id)))
-        print()
+        await self.log('Logged in as:\n' + self.user.name + '\n' + str(self.user.id))
         global matchmaking
         matchmaking = False
         for server in client.guilds:
@@ -50,22 +75,13 @@ class MyClient(discord.Client):
                 if channel.name == data["targetchannels"]["welcome"]:
                     global targetChannel
                     targetChannel = channel
-                    print("-" * len(str(targetChannel.id)))
-                    print("Found " + targetChannel.name)
-                    print(str(targetChannel.id))
-                    print("-" * len(str(targetChannel.id)))
-                    print()
+                    await self.log("Found #" + targetChannel.name + "\n" + str(targetChannel.id))
                 if channel.name == data["targetchannels"]["complaints"]:
                     global complaintsChannel
                     complaintsChannel = channel
-                    print("-" * len(str(complaintsChannel.id)))
-                    print("Found " + complaintsChannel.name)
-                    print(str(complaintsChannel.id))
-                    print("-" * len(str(complaintsChannel.id)))
-                    print()
+                    await self.log("Found #" + complaintsChannel.name + "\n" + str(complaintsChannel.id))
 
     async def clean_list(self, finput, newlines=False):
-        print("Cleaning list...")
         output = ""
         if not newlines:
             i = 0
@@ -83,18 +99,19 @@ class MyClient(discord.Client):
 
     async def on_message(self, message):
         global matchmaking
-        highestlen = 0
+        dm = False
         try:
             msglist = ["From: " + str(message.author), "Sent in: " + str(message.author.guild) + " in #" + str(message.channel), "Content: " + str(message.content)]
         except AttributeError:
             msglist = ["From: " + str(message.author), "In a " + str(message.channel), "Content: " + str(message.content)]
+            dm = True
+        finalmsg = ""
         for msg in msglist:
-            if len(msg) > highestlen:
-                highestlen = len(msg)
-        print("-" * highestlen)
-        for msg in msglist:
-            print(msg)
-        print("-" * highestlen)
+            finalmsg = finalmsg + msg + '\n'
+        finalmsg = finalmsg[:-1]
+        await self.log(finalmsg)
+        if dm:
+            return
         if "new member" not in [role.name.lower() for role in message.author.roles]:
             if message.content == "!matchmake":
                 await message.delete()
@@ -131,14 +148,11 @@ class MyClient(discord.Client):
         if message is not None:
             member = message.author
         membername = str(member)
-        print(data["assignedroles"].keys())
-        print(membername)
         if membername in data["assignedroles"].keys():
             for role in data["assignedroles"][membername]:
                 role = discord.utils.get(member.guild.roles, name=role)
                 await member.add_roles(role)
             if message is not None:
-                print("Assigning roles...")
                 rolelist = data["assignedroles"][membername]
                 rolelist = await self.clean_list(rolelist)
                 em = discord.Embed(title="Success", description="\nAssigned the following roles: " + rolelist + ".")
@@ -150,7 +164,6 @@ class MyClient(discord.Client):
                 await message.channel.send("Failed to assign roles, please contact " + "<@" + data["admintoken"] + "> to fix this.")
 
     def emojicheck(self, reaction, user):
-        print("Emoji check on")
         global messageauthor
         global checkedValue
         global custom
@@ -168,7 +181,7 @@ class MyClient(discord.Client):
         return messageauthor == message.author and str(message.channel) == str(targetChannel)
 
     async def matchmake(self, member):
-        print("Matchmaking: " + str(member))
+        await self.log("Matchmaking:\n" + str(member))
         global matchmaking
         global messageauthor
         global checkedValue
@@ -200,7 +213,7 @@ class MyClient(discord.Client):
                 msg = await targetChannel.send(embed=em)
                 if data["questions"][name]["reactiontype"] == "text":
                     while True:
-                        print("Getting user input...")
+                        await self.log("Getting user input...")
                         role = discord.utils.get(member.guild.roles, name=data["textrole"])
                         await member.add_roles(role)
                         messageauthor = member
@@ -208,9 +221,9 @@ class MyClient(discord.Client):
                             usermsg = await client.wait_for('message', check=self.textcheck, timeout=120)
                         except asyncio.TimeoutError:
                             usermsg = None
-                        print("Recieved message: " + str(usermsg.content))
+                        await self.log("Recieved message: " + str(usermsg.content))
                         if usermsg is None:
-                            print("Timed out")
+                            await self.log("Timed out")
                             matchmaking = False
                             await welcomemsg.delete()
                             try:
@@ -233,10 +246,8 @@ class MyClient(discord.Client):
                             await member.remove_roles(role)
                             if data["questions"][name]["roles"] == 0:
                                 answerIndex = loweranswers.index(msgcontent.lower())
-                                print("Roles is set to 0")
                                 role = discord.utils.get(member.guild.roles, name=data["questions"][name]["answers"][answerIndex])
                                 await member.add_roles(role)
-                                print("Role assigned")
                                 break
                             else:
                                 answerIndex = loweranswers.index(msgcontent)
@@ -250,18 +261,16 @@ class MyClient(discord.Client):
                     i += 1
                     continue
                 while True:
-                    print(str(client.emojis))
                     if data["questions"][name]["reactiontype"] == "custom":
                         custom = True
                         emojis = []
                         for emoji in data["questions"][name]["answers"]:
                             emojis.append(discord.utils.get(client.emojis, name=emoji))
-                            print(str(emojis))
                     else:
                         emojis = data["questions"][name]["answers"]
+                    await self.log("Possibile Responses are:\n" + str(emojis))
                     for emoji in emojis:
                         await msg.add_reaction(emoji)
-                    print("Emojis list: " + str(emojis))
                     messageauthor = member
                     checkedValue = emojis
                     try:
@@ -269,7 +278,7 @@ class MyClient(discord.Client):
                     except asyncio.TimeoutError:
                         res = None
                     if res is None:
-                        print("Timed out")
+                        await self.log("Timed out")
                         matchmaking = False
                         await msg.delete()
                         await welcomemsg.delete()
@@ -288,7 +297,7 @@ class MyClient(discord.Client):
                         res = res.emoji
                     if res in data["questions"][name]["answers"]:
                         answerIndex = data["questions"][name]["answers"].index(res)
-                        print("Emoji at index:", str(answerIndex))
+                        await self.log("Emoji at index:\n" + str(answerIndex))
                         break
                 if res is None:
                     msg = res
@@ -296,7 +305,7 @@ class MyClient(discord.Client):
                 else:
                     if data["questions"][name]["type"] == "role" and data["questions"][name]["roles"][answerIndex] != "":
                         role = discord.utils.get(member.guild.roles, name=data["questions"][name]["roles"][answerIndex])
-                        print(str(role))
+                        await self.log("Assigning role:\n" + str(role))
                         await member.add_roles(role)
                     if data["questions"][name]["type"] == "action":
                         if data["questions"][name]["actions"][answerIndex] == "close":
