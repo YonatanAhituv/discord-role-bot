@@ -3,6 +3,9 @@
     "token": "",
     // The name of the server the bot is running on (used for welcome messages)
     "servername": "Example Server",
+    // The prefix before commands, so if it was !, then all commands would
+    // need to be used with a ! beforehand, so !complain, !matchmake, etc.
+    "commandprefix": "!",
     // The id of the admin to contact, you can get this by running the bot without it
     // Then mentioning the admin you want to put in and then grabbing the number that shows up
     // So @someone would show up something like <@000000000000000000>, 

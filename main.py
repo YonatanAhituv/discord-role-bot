@@ -22,7 +22,7 @@ global custom
 
 matchmaking = False
 
-class MyClient(discord.Client):
+class roleBot(discord.Client):
 
     async def mute(self, member: discord.Member):
         global matchmaking
@@ -68,6 +68,8 @@ class MyClient(discord.Client):
     async def on_ready(self):
         print()
         await self.log('Logged in as:\n' + self.user.name + '\n' + str(self.user.id))
+        game = discord.Game(data["commandprefix"] + "help")
+        await client.change_presence(status=discord.Status.online, activity=game)
         global matchmaking
         matchmaking = False
         for server in client.guilds:
@@ -97,6 +99,10 @@ class MyClient(discord.Client):
                 output += item + "\n"
             return output[:-1]
 
+    async def helpmessage(self, message):
+        em = discord.Embed(title="**All Commands**", description="\n*Prefix is " + data["commandprefix"] + "*\n**" + data["commandprefix"] + "matchmake**\nRestarts the inital matchmaking process\n**" + data["commandprefix"] + "complain <message>**\nSends a private messaage to moderators\n**" + data["commandprefix"] + "roleassign**\nReassigns custom moderator given roles (won't always work depending on the server)")
+        await message.channel.send(embed=em)
+
     async def on_message(self, message):
         global matchmaking
         dm = False
@@ -113,7 +119,7 @@ class MyClient(discord.Client):
         if dm:
             return
         if "new member" not in [role.name.lower() for role in message.author.roles]:
-            if message.content == "!matchmake":
+            if message.content == data["commandprefix"] + "matchmake":
                 await message.delete()
                 if not matchmaking:
                     statusmsg = await message.channel.send(content="Matchmaking " + message.author.mention + "...")
@@ -124,18 +130,20 @@ class MyClient(discord.Client):
                     statusmsg = await message.channel.send(embed=em)
                     sleep(2)
                     await statusmsg.delete()
-            elif message.content == "!roleassign":
+            elif message.content == data["commandprefix"] + "roleassign":
                 await message.delete()
                 await self.roleassign(message=message)
+            elif message.content == data["commandprefix"] + "help":
+                await self.helpmessage(message)
             else:
                 msglist = message.content.split()
-                if len(msglist) > 0 and msglist[0] == "!complain":
+                if len(msglist) > 0 and msglist[0] == data["commandprefix"] + "complain":
                     await self.complain(message)
         else:
             await message.delete()
 
     async def complain(self, message):
-        complaint = message.content.replace("!complain ", "")
+        complaint = message.content.replace(data["commandprefix"] + "complain ", "")
         await message.delete()
         em = discord.Embed(title="Success", description="\nComplaint has been sent to moderators!")
         msg = await message.channel.send(embed=em)
@@ -322,5 +330,5 @@ class MyClient(discord.Client):
     async def on_member_join(self, member):
         await self.matchmake(member)
 
-client = MyClient()
+client = roleBot()
 client.run(token)
