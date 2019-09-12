@@ -100,7 +100,7 @@ class roleBot(discord.Client):
             return output[:-1]
 
     async def helpmessage(self, message):
-        em = discord.Embed(title="**All Commands**", description="\n*Prefix is " + data["commandprefix"] + "*\n**" + data["commandprefix"] + "matchmake**\nRestarts the inital matchmaking process\n**" + data["commandprefix"] + "complain <message>**\nSends a private messaage to moderators\n**" + data["commandprefix"] + "roleassign**\nReassigns custom moderator given roles (won't always work depending on the server)")
+        em = discord.Embed(title="**All Commands**", description="\n*Prefix is " + data["commandprefix"] + "*\n**" + data["commandprefix"] + "matchmake**\nRestarts the inital matchmaking process\n**" + data["commandprefix"] + "complain <message>**\nSends a private messaage to moderators\n**" + data["commandprefix"] + "roleassign**\nReassigns custom moderator given roles (won't always work depending on the server)\n**" + data["commandprefix"] + "help**\nDisplays this help message")
         await message.channel.send(embed=em)
 
     async def on_message(self, message):
