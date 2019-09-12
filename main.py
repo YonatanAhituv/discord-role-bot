@@ -156,12 +156,19 @@ class roleBot(discord.Client):
         if message is not None:
             member = message.author
         membername = str(member)
-        if membername in data["assignedroles"].keys():
-            for role in data["assignedroles"][membername]:
+        memberid = str(member.id)
+        memberNameKeys = membername in data["assignedroles"].keys()
+        memberIdKeys = memberid in data["assignedroles"].keys()
+        if memberNameKeys or memberIdKeys:
+            if memberNameKeys:
+                membervalue = membername
+            if memberIdKeys:
+                membervalue = memberid
+            for role in data["assignedroles"][membervalue]:
                 role = discord.utils.get(member.guild.roles, name=role)
                 await member.add_roles(role)
             if message is not None:
-                rolelist = data["assignedroles"][membername]
+                rolelist = data["assignedroles"][membervalue]
                 rolelist = await self.clean_list(rolelist)
                 em = discord.Embed(title="Success", description="\nAssigned the following roles: " + rolelist + ".")
                 msg = await message.channel.send(embed=em)
@@ -169,7 +176,7 @@ class roleBot(discord.Client):
                 await msg.delete()
         else:
             if message is not None:
-                await message.channel.send("Failed to assign roles, please contact " + "<@" + data["admintoken"] + "> to fix this.")
+                await message.channel.send("Failed to assign roles, if you think this is an error, please contact " + "<@" + data["admintoken"] + "> to fix this.")
 
     def emojicheck(self, reaction, user):
         global messageauthor

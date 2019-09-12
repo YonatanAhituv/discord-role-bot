@@ -26,9 +26,10 @@
         "welcome": "welcome"
     },
     "assignedroles": {
-        // This is a database of roles, just put anyones name in and a list of roles and it'll auto assign it
+        // This is a database of roles, just put anyones name or user id in and a list of roles and it'll auto assign it
         // Specifically on join, and when they type !roleassign
-        "Someone#12345": ["role 1", "role 2", "role 3"]
+        "Someone#12345": ["role 1", "role 2", "role 3"],
+        "0000000000000000000": ["role 3", "role 4"]
     },
     "questions": {
         // This is the main part of the bot
