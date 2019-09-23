@@ -236,7 +236,6 @@ class roleBot(discord.Client):
                             usermsg = await client.wait_for('message', check=self.textcheck, timeout=120)
                         except asyncio.TimeoutError:
                             usermsg = None
-                        await self.log("Recieved message: " + str(usermsg.content))
                         if usermsg is None:
                             await self.log("Timed out")
                             matchmaking = False
@@ -252,6 +251,7 @@ class roleBot(discord.Client):
                             await usermsg.delete()
                         except discord.errors.NotFound:
                             pass
+                        await self.log("Recieved message: " + str(usermsg.content))
                         msgcontent = usermsg.content
                         loweranswers = []
                         for item in data["questions"][name]["answers"]:
