@@ -68,7 +68,7 @@ class roleBot(discord.Client):
     async def on_ready(self):
         print()
         await self.log('Logged in as:\n' + self.user.name + '\n' + str(self.user.id))
-        game = discord.Game(data["commandprefix"] + "help")
+        game = discord.Game(data["botpresence"].replace("{help}", data["commandprefix"] + "help"))
         await client.change_presence(status=discord.Status.online, activity=game)
         global matchmaking
         matchmaking = False
@@ -190,10 +190,40 @@ class roleBot(discord.Client):
                     return messageauthor == user
             return False
 
+    def multipleemojicheck(self, reaction, user):
+        global messageauthor
+        global checkedValue
+        global custom
+        newValue = checkedValue.copy()
+        newValue.append("✅")
+        if not custom:
+            return messageauthor == user and str(reaction.emoji) in newValue
+        else:
+            for item in newValue:
+                if str(reaction.emoji) == str(item):
+                    return messageauthor == user
+            return False
+
     def textcheck(self, message):
         global messageauthor
         global targetChannel
         return messageauthor == message.author and str(message.channel) == str(targetChannel)
+
+    async def timeout(self, member, welcomemsg, msg):
+        global matchmaking
+        await self.log("Timed out")
+        if not matchmaking:
+            return False
+        matchmaking = False
+        await msg.delete()
+        await welcomemsg.delete()
+        try:
+            await member.send("Timed out, rejoin " + data["servername"] + " to try again.")
+            await member.send(data["serverinvite"])
+        except discord.errors.Forbidden:
+            pass
+        await member.kick()
+        return True
 
     async def matchmake(self, member):
         await self.log("Matchmaking:\n" + str(member))
@@ -201,6 +231,10 @@ class roleBot(discord.Client):
         global messageauthor
         global checkedValue
         global custom
+        global welcomemsg
+        global msg
+        messageauthor = member
+        questionSkip = 0
         if matchmaking:
             em = discord.Embed(title="ERROR", description="\nAlready matchmaking someone else, please try again soon!")
             try:
@@ -218,8 +252,16 @@ class roleBot(discord.Client):
             welcomemsg = await targetChannel.send(content=member.mention + ", welcome to " + data["servername"] + ". In order to begin, please answer the following questions.")
             i = 1
             for name in data["questions"]:
+                if questionSkip > 0:
+                    questionSkip -= 1
+                    i += 1
+                    continue
+                if data["questions"][name]["type"] == "submit":
+                    break
                 custom = False
                 additions = ""
+                if data["questions"][name]["questiontype"] == "multiple":
+                    additions = "\nPick all of the below that apply, and then press the checkmark"
                 if data["questions"][name]["reactiontype"] == "text":
                     optionlist = data["questions"][name]["answers"]
                     optionlist = await self.clean_list(optionlist, newlines=True)
@@ -231,22 +273,15 @@ class roleBot(discord.Client):
                         await self.log("Getting user input...")
                         role = discord.utils.get(member.guild.roles, name=data["textrole"])
                         await member.add_roles(role)
-                        messageauthor = member
                         try:
                             usermsg = await client.wait_for('message', check=self.textcheck, timeout=120)
                         except asyncio.TimeoutError:
                             usermsg = None
-                        if usermsg is None:
-                            await self.log("Timed out")
-                            matchmaking = False
-                            await welcomemsg.delete()
-                            try:
-                                await member.send("Timed out, rejoin " + data["servername"] + " to try again.")
-                                await member.send(data["serverinvite"])
-                            except discord.errors.Forbidden:
-                                pass
-                            await member.kick()
-                            break
+                            returnval = await self.timeout(member, welcomemsg, msg)
+                            if returnval:
+                                break
+                            if not returnval:
+                                return
                         try:
                             await usermsg.delete()
                         except discord.errors.NotFound:
@@ -286,46 +321,94 @@ class roleBot(discord.Client):
                     await self.log("Possibile Responses are:\n" + str(emojis))
                     for emoji in emojis:
                         await msg.add_reaction(emoji)
-                    messageauthor = member
                     checkedValue = emojis
-                    try:
-                        res = await client.wait_for('reaction_add', check=self.emojicheck, timeout=120)
-                    except asyncio.TimeoutError:
-                        res = None
-                    if res is None:
-                        await self.log("Timed out")
-                        matchmaking = False
-                        await msg.delete()
-                        await welcomemsg.delete()
+                    if data["questions"][name]["questiontype"] == "single":
                         try:
-                            await member.send("Timed out, rejoin " + data["servername"] + " to try again.")
-                            await member.send(data["serverinvite"])
-                        except discord.errors.Forbidden:
-                            pass
-                        await member.kick()
-                        break
-                    res = res[0]
-                    if data["questions"][name]["reactiontype"] == "custom":
-                        res = res.emoji.name
-                        res = res.lower()
-                    else:
-                        res = res.emoji
-                    if res in data["questions"][name]["answers"]:
-                        answerIndex = data["questions"][name]["answers"].index(res)
-                        await self.log("Emoji at index:\n" + str(answerIndex))
+                            res = await client.wait_for('reaction_add', check=self.emojicheck, timeout=120)
+                        except asyncio.TimeoutError:
+                            res = None
+                            returnval = await self.timeout(member, welcomemsg, msg)
+                            if returnval:
+                                break
+                            if not returnval:
+                                return
+                        res = res[0]
+                        answerIndex = []
+                        if data["questions"][name]["reactiontype"] == "custom":
+                            res = res.emoji.name
+                            res = res.lower()
+                        else:
+                            res = res.emoji
+                        if res in data["questions"][name]["answers"]:
+                            answerIndex.append(data["questions"][name]["answers"].index(res))
+                            await self.log("Emoji at index:\n" + str(answerIndex))
+                            break
+                    if data["questions"][name]["questiontype"] == "multiple":
+                        await msg.add_reaction("✅")
+                        response = []
+                        answerIndex = []
+                        while True:
+                            try:
+                                await self.log("Waiting for reaction...")
+                                res = await client.wait_for('reaction_add', check=self.multipleemojicheck, timeout=120)
+                                await self.log("Got reaction: " + str(res[0].emoji))
+                                if str(res[0].emoji) == "✅":
+                                    break
+                                if data["questions"][name]["reactiontype"] == "custom":
+                                    response.append(str(res[0].emoji.name))
+                                else:
+                                    response.append(str(res[0].emoji))
+                            except asyncio.TimeoutError:
+                                response = None
+                                break
+                        if response is None:
+                            res = None
+                            returnval = await self.timeout(member, welcomemsg, msg)
+                            if returnval:
+                                break
+                            if not returnval:
+                                return
+                        for item in response:
+                            answerIndex.append(data["questions"][name]["answers"].index(item))
                         break
                 if res is None:
                     msg = res
                     break
                 else:
-                    if data["questions"][name]["type"] == "role" and data["questions"][name]["roles"][answerIndex] != "":
-                        role = discord.utils.get(member.guild.roles, name=data["questions"][name]["roles"][answerIndex])
-                        await self.log("Assigning role:\n" + str(role))
-                        await member.add_roles(role)
-                    if data["questions"][name]["type"] == "action":
+                    if data["questions"][name]["type"] == "hybrid":
+                        questiontype = data["questions"][name]["actionassignment"][answerIndex[0]]
+                    else:
+                        questiontype = data["questions"][name]["type"]
+                    if questiontype == "role":
+                        if data["questions"][name]["type"] == "hybrid":
+                            rolelist = data["questions"][name]["actions"]
+                        else:
+                            rolelist = data["questions"][name]["roles"]
+                        for item in answerIndex:
+                            if rolelist[item] == "":
+                                continue
+                            role = discord.utils.get(member.guild.roles, name=rolelist[item])
+                            await self.log("Assigning role:\n" + str(role))
+                            await member.add_roles(role)
+                    if questiontype == "action":
+                        answerIndex = answerIndex[0]
+                        if data["questions"][name]["actions"][answerIndex] != "":
+                            actionList = data["questions"][name]["actions"][answerIndex].split()
                         if data["questions"][name]["actions"][answerIndex] == "close":
                             await msg.delete()
                             break
+                        if data["questions"][name]["actions"][answerIndex] != "" and actionList[0] == "goto":
+                            questionNames = data["questions"].keys()
+                            increment = 0
+                            gotoQuestion = 0
+                            for question in questionNames:
+                                if question == actionList[1]:
+                                    gotoQuestion = increment
+                                increment += 1
+                            questionSkip = gotoQuestion - i
+                            i += 1
+                            await msg.delete()
+                            continue
                 await msg.delete()
                 i += 1
             if msg is not None:
@@ -335,7 +418,20 @@ class roleBot(discord.Client):
                 await self.roleassign(member=member)
 
     async def on_member_join(self, member):
+        await self.log(str(member) + " has joined the server.")
         await self.matchmake(member)
+
+    async def on_member_remove(self, member):
+        await self.log(str(member) + " has left the server.")
+        global matchmaking
+        global msg
+        global welcomemsg
+        global messageauthor
+        if matchmaking:
+            if member == messageauthor:
+                matchmaking = False
+                await msg.delete()
+                await welcomemsg.delete()
 
 client = roleBot()
 client.run(token)

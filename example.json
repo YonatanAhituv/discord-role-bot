@@ -43,6 +43,10 @@
             // action is pretty much just used as a continue or stop and will
             // be talked about later, role is used to assign roles, of course
             "type": "role",
+            // This specifies how many options can be picked in a question,
+            // basically, is this a checkbox question where multiple can be picked
+            // or is this a multiple choice question where only one can be picked
+            "questiontype": "single",
             // The bot can use both normal and custom emojis, unicode means you'd like
             // to use normal emojis, so you can put just any standard emoji in,
             // while custom is just server emojis if you'd like to add your own
@@ -64,6 +68,8 @@
             "question": "Example Question 2",
             // Same thing as well
             "type": "role",
+            // Same here
+            "questiontype": "single",
             // This time custom reactiontype
             "reactiontype" : "custom",
             // Now instead of emojis, you just put in the custom emoji's name
@@ -79,6 +85,8 @@
             "question": "Do you want to continue?",
             // This time action type
             "type": "action",
+            // Same here
+            "questiontype": "single",
             // Same as earlier
             "reactiontype": "unicode",
             // Same here too
@@ -89,11 +97,72 @@
             // then the later questions can ask for more info
             "actions": ["", "close"]
         },
+        "hybridquestion": {
+            // Same as earlier
+            "question": "Example 3",
+            // This time hybrid type
+            "type": "hybrid",
+            // Same thing
+            "questiontype": "single",
+            // Hybrid allows you to have one answer result in one action and another something else,
+            // so for example, if you answer yes, it can give you a role, but if you answer no,
+            // it can run an action, in this list, you assign the actions to their type, in the 
+            // same organization methodology as the answers and actions lists
+            "actionassignment": ["role", "action"],
+            // Same as earlier
+            "reactiontype": "unicode",
+            // Same here too
+            "answers": ["👍", "👎"],
+            // Now, close just means to stop all the questions and finish, while nothing
+            // just means to continue, this is useful if you want to ask a set of follow up questions,
+            // Like, are you intrested in this? If no, close, if yes, put an empty string,
+            // then the later questions can ask for more info
+            "actions": ["Example Role", "close"]
+        },
+        "gotoquestion": {
+            // Same thing
+            "question": "Do you want to continue?",
+            // Same too
+            "type": "action",
+            // Same as well
+            "questiontype": "single",
+            // Same again
+            "reactiontype": "unicode",
+            // Again, same thing
+            "answers": ["👍", "👎"],
+            // Now a goto action, in order to use a goto, you type in "goto" and then follow that by
+            // question name, so for example, if this was a different question and I wanted to go to this one,
+            // I would type in "goto gotoquestion" and it would skip ahead to that
+            "actions": ["goto testquestion", ""]
+        },
+        "checklistquestion": {
+            // Same here
+            "question": "Example Question 5000.23",
+            // Yup
+            "type": "role",
+            // This is different, basically, now instead of just reacting with the emojis in the "answers" list,
+            // it will react with an additional checkmark at the end, so that users can pick as many options
+            // from the answers list and then hit the checkmark when done in order to assign a large
+            // number of roles at once.
+            "questiontype": "multiple",
+            // Yeah
+            "reactiontype": "unicode",
+            // Same thing
+            "answers": ["📊", "📈", "📏", "👍"],
+            // You get the idea
+            "roles": ["Role 1", "Role 2", "Role 3", "Role 4"]
+        },
+        "autosubmitquestions": {
+            // Title says all. Questions that immediently submit when reached
+            "type": "submit"
+        }
         "textquestion": {
             // Same thing
             "question": "Pick an option",
             // Can be set as needed
             "type": "role",
+            // Same again
+            "questiontype": "single",
             // Now reactiontype is text
             "reactiontype": "text",
             // Below you can put a list of answers that the bot will prompt foor
