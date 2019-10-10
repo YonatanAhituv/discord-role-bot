@@ -176,7 +176,10 @@ class roleBot(discord.Client):
                 await msg.delete()
         else:
             if message is not None:
-                await message.channel.send("Failed to assign roles, if you think this is an error, please contact " + "<@" + data["admintoken"] + "> to fix this.")
+                em = discord.Embed(title="ERROR", description="\nFailed to assign roles, if you think this is an error, please contact " + "<@" + data["admintoken"] + "> to fix this.")
+                msg = await message.channel.send(embed=em)
+                sleep(2)
+                await msg.delete()
 
     def emojicheck(self, reaction, user):
         global messageauthor
@@ -218,7 +221,8 @@ class roleBot(discord.Client):
         await msg.delete()
         await welcomemsg.delete()
         try:
-            await member.send("Timed out, rejoin " + data["servername"] + " to try again.")
+            em = discord.Embed(title="ERROR", description="\nTimed out! You took too long to respond to the questions (2 minutes).")
+            await member.send(embed=em)
             await member.send(data["serverinvite"])
         except discord.errors.Forbidden:
             pass
