@@ -1,0 +1,13 @@
+[[source]]
+
+url = "https://pypi.python.org/simple"
+verify_ssl = true
+
+[packages]
+
+"discord.py" = "==1.2.3"
+
+"colorama" = "==0.4.1"
+
+[requires]
+python_version = "3.7.4"
