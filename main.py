@@ -237,8 +237,6 @@ class roleBot(discord.Client):
         global custom
         global welcomemsg
         global msg
-        messageauthor = member
-        questionSkip = 0
         if matchmaking:
             em = discord.Embed(title="ERROR", description="\nAlready matchmaking someone else, please try again soon!")
             try:
@@ -249,6 +247,8 @@ class roleBot(discord.Client):
             await member.kick()
             return
         if not member.bot:
+            messageauthor = member
+            questionSkip = 0
             totalquestions = len(data["questions"].keys())
             await self.mute(member)
             if not matchmaking:
