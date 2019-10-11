@@ -104,6 +104,8 @@ class roleBot(discord.Client):
         await message.channel.send(embed=em)
 
     async def on_message(self, message):
+        if message.author.id == self.user.id:
+            return
         global matchmaking
         dm = False
         try:
