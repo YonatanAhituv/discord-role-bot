@@ -1,7 +1,6 @@
 import discord
 import asyncio
 import json
-import threading
 from time import sleep
 from colorama import init
 from colorama import Fore, Style
@@ -35,7 +34,10 @@ class roleBot(discord.Client):
         role = discord.utils.get(member.guild.roles, name=data["newrole"])
         try:
             await member.edit(roles=[role])
-        except:
+        except discord.errors.NotFound:
+            matchmaking = False
+        except discord.errors.Forbidden:
+            await self.log("ERROR:\nNot enough permissions to matchmake, make sure the bots role is at the top")
             matchmaking = False
 
     async def unmute(self, member: discord.Member):
@@ -47,8 +49,7 @@ class roleBot(discord.Client):
     async def emoji_count(self, text):
         emojicount = 0
         for char in text:
-            isascii = lambda s: len(s) == len(s.encode())
-            if not isascii(char):
+            if len(char) != len(char.encode()):
                 emojicount += 1
         return emojicount
 
@@ -470,8 +471,11 @@ class roleBot(discord.Client):
         if matchmaking:
             if member == messageauthor:
                 matchmaking = False
-                await msg.delete()
-                await welcomemsg.delete()
+                try:
+                    await welcomemsg.delete()
+                    await msg.delete()
+                except NameError:
+                    pass
 
 client = roleBot()
 client.run(token)
