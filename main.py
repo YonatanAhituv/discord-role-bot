@@ -20,10 +20,6 @@ global checkedValue
 
 global custom
 
-global spamauthor
-
-spamauthor = {}
-
 matchmaking = False
 
 class roleBot(discord.Client):
@@ -109,26 +105,6 @@ class roleBot(discord.Client):
         em = discord.Embed(title="**All Commands**", description="\n*Prefix is " + data["commandprefix"] + "*\n**" + data["commandprefix"] + "matchmake**\nRestarts the inital matchmaking process\n**" + data["commandprefix"] + "complain <message>**\nSends a private messaage to moderators\n**" + data["commandprefix"] + "roleassign**\nReassigns custom moderator given roles (won't always work depending on the server)\n**" + data["commandprefix"] + "help**\nDisplays this help message")
         await message.channel.send(embed=em)
 
-    async def msgspam(self, message):
-        global spamauthor
-        if message.author not in spamauthor.keys():
-            spamauthor[message.author] = 0
-        spamauthor[message.author] += 1
-        spami = spamauthor[message.author]
-        if spami == 5:
-            em = discord.Embed(title="ERROR", description="\nToo many messages! Please wait 10 seconds and try again.")
-            msg = await message.channel.send(embed=em)
-            await message.delete()
-            sleep(10)
-            await msg.delete()
-            spamauthor[message.author] = 0
-            return False
-        elif spami > 5:
-            await message.delete()
-            return False
-        else:
-            return True
-
     async def on_message(self, message):
         if message.author.id == self.user.id:
             return
@@ -159,22 +135,13 @@ class roleBot(discord.Client):
                     sleep(2)
                     await statusmsg.delete()
             elif message.content == data["commandprefix"] + "roleassign":
-                response = await self.msgspam(message)
-                if not response:
-                    return
                 await message.delete()
                 await self.roleassign(message=message)
             elif message.content == data["commandprefix"] + "help":
-                response = await self.msgspam(message)
-                if not response:
-                    return
                 await self.helpmessage(message)
             else:
                 msglist = message.content.split()
                 if len(msglist) > 0 and msglist[0] == data["commandprefix"] + "complain":
-                    response = await self.msgspam(message)
-                    if not response:
-                        return
                     await self.complain(message)
         else:
             await message.delete()
