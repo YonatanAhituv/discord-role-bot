@@ -305,12 +305,14 @@ class roleBot(discord.Client):
                             if data["questions"][name]["roles"] == 0:
                                 answerIndex = loweranswers.index(msgcontent.lower())
                                 role = discord.utils.get(member.guild.roles, name=data["questions"][name]["answers"][answerIndex])
-                                await member.add_roles(role)
+                                if role is not None:
+                                    await member.add_roles(role)
                                 break
                             else:
-                                answerIndex = loweranswers.index(msgcontent)
+                                answerIndex = loweranswers.index(msgcontent.lower())
                                 role = discord.utils.get(member.guild.roles, name=data["questions"][name]["roles"][answerIndex])
-                                await member.add_roles(role)
+                                if role is not None:
+                                    await member.add_roles(role)
                                 break
                     await msg.delete()
                     if usermsg is None:
