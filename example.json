@@ -6,6 +6,11 @@
     // The prefix before commands, so if it was !, then all commands would
     // need to be used with a ! beforehand, so !complain, !matchmake, etc.
     "commandprefix": "!",
+    // Specifies the bots discord presence, {help} gets automatically transformed into
+    // the bots current help command based off the command prefix,
+    // In this case, the bots presence would look like this:
+    // Playing with your roles | !help
+    "botpresence": "with your roles | {help}",
     // The id of the admin to contact, you can get this by running the bot without it
     // Then mentioning the admin you want to put in and then grabbing the number that shows up
     // So @someone would show up something like <@000000000000000000>, 
