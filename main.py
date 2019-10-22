@@ -126,8 +126,13 @@ class roleBot(discord.Client):
             if message.content == data["commandprefix"] + "matchmake":
                 await message.delete()
                 if not matchmaking:
-                    statusmsg = await message.channel.send(content="Matchmaking " + message.author.mention + "...")
-                    await self.matchmake(message.author)
+                    em = discord.Embed(title="STATUS", description="\nMatchmaking " + message.author.mention + "...")
+                    statusmsg = await message.channel.send(embed=em)
+                    try:
+                        await self.matchmake(message.author)
+                    except (KeyError, discord.errors.HTTPException, AttributeError) as e:
+                        await self.log("ERROR\n" + str(e))
+                        await self.cancelmatchmake("\nSomething went wrong. Try again later.")
                     await statusmsg.delete()
                 else:
                     em = discord.Embed(title="ERROR", description="\nAlready matchmaking someone else, please try again soon!")
@@ -216,22 +221,31 @@ class roleBot(discord.Client):
         global targetChannel
         return messageauthor == message.author and str(message.channel) == str(targetChannel)
 
-    async def timeout(self, member, welcomemsg, msg):
+    async def cancelmatchmake(self, kickmsg):
         global matchmaking
-        await self.log("Timed out")
+        global welcomemsg
+        global msg
+        global messageauthor
+        member = messageauthor
         if not matchmaking:
             return False
         matchmaking = False
-        await msg.delete()
-        await welcomemsg.delete()
+        if 'msg' in globals():
+            await msg.delete()
+        if 'welcomemsg' in globals():
+            await welcomemsg.delete()
         try:
-            em = discord.Embed(title="ERROR", description="\nTimed out! You took too long to respond to the questions (2 minutes).")
+            em = discord.Embed(title="ERROR", description=kickmsg)
             await member.send(embed=em)
             await member.send(data["serverinvite"])
         except discord.errors.Forbidden:
             pass
         await member.kick()
         return True
+
+    async def timeout(self):
+        await self.log("Timed out")
+        await self.cancelmatchmake("\nTimed out! You took too long to respond to the questions (2 minutes).")
 
     async def matchmake(self, member):
         await self.log("Matchmaking:\n" + str(member))
@@ -285,7 +299,8 @@ class roleBot(discord.Client):
                             usermsg = await client.wait_for('message', check=self.textcheck, timeout=120)
                         except asyncio.TimeoutError:
                             usermsg = None
-                            returnval = await self.timeout(member, welcomemsg, msg)
+                            # returnval = await self.timeout()
+                            returnval = await self.timeout()
                             if returnval:
                                 break
                             if not returnval:
@@ -337,7 +352,7 @@ class roleBot(discord.Client):
                             res = await client.wait_for('reaction_add', check=self.emojicheck, timeout=120)
                         except asyncio.TimeoutError:
                             res = None
-                            returnval = await self.timeout(member, welcomemsg, msg)
+                            returnval = await self.timeout()
                             if returnval:
                                 break
                             if not returnval:
@@ -373,7 +388,7 @@ class roleBot(discord.Client):
                                 break
                         if response is None:
                             res = None
-                            returnval = await self.timeout(member, welcomemsg, msg)
+                            returnval = await self.timeout()
                             if returnval:
                                 break
                             if not returnval:
@@ -428,8 +443,14 @@ class roleBot(discord.Client):
                 await self.roleassign(member=member)
 
     async def on_member_join(self, member):
+        global welcomemsg
+        global msg
         await self.log(str(member) + " has joined the server.")
-        await self.matchmake(member)
+        try:
+            await self.matchmake(member)
+        except (KeyError, discord.errors.HTTPException, AttributeError) as e:
+            await self.log("ERROR\n" + str(e))
+            await self.cancelmatchmake("\nSomething went wrong. Try again later.")
 
     async def on_member_remove(self, member):
         await self.log(str(member) + " has left the server.")
