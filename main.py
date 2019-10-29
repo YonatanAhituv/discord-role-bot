@@ -154,7 +154,7 @@ class roleBot(discord.Client):
     async def complain(self, message):
         complaint = message.content.replace(data["commandprefix"] + "complain ", "")
         await message.delete()
-        em = discord.Embed(title="Success", description="\nComplaint has been sent to moderators!")
+        em = discord.Embed(title="SUCCESS", description="\nComplaint has been sent to moderators!")
         msg = await message.channel.send(embed=em)
         em = discord.Embed(title="Complaint Recieved", description="\n" + str(complaint))
         await complaintsChannel.send(embed=em)
@@ -173,13 +173,20 @@ class roleBot(discord.Client):
                 membervalue = membername
             if memberIdKeys:
                 membervalue = memberid
+            rolelist = data["assignedroles"][membervalue]
+            rolelist = await self.clean_list(rolelist)
             for role in data["assignedroles"][membervalue]:
                 role = discord.utils.get(member.guild.roles, name=role)
+                if role is None:
+                    em = discord.Embed(title="ERROR", description="\nFailed to assign the following roles: " + rolelist + ".")
+                    msg = await message.channel.send(embed=em)
+                    sleep(2)
+                    await msg.delete()
+                    message = None
+                    break
                 await member.add_roles(role)
             if message is not None:
-                rolelist = data["assignedroles"][membervalue]
-                rolelist = await self.clean_list(rolelist)
-                em = discord.Embed(title="Success", description="\nAssigned the following roles: " + rolelist + ".")
+                em = discord.Embed(title="SUCCESS", description="\nAssigned the following roles: " + rolelist + ".")
                 msg = await message.channel.send(embed=em)
                 sleep(2)
                 await msg.delete()
