@@ -85,7 +85,7 @@ class roleBot(discord.Client):
                     complaintsChannel = channel
                     await self.log("Found #" + complaintsChannel.name + "\n" + str(complaintsChannel.id))
 
-    async def clean_list(self, finput, newlines=False):
+    async def clean_list(self, finput, newlines=False, numbers=False):
         output = ""
         if not newlines:
             i = 0
@@ -97,8 +97,13 @@ class roleBot(discord.Client):
                 i += 1
             return output[:-2]
         else:
+            i = 1
             for item in finput:
-                output += item + "\n"
+                if numbers:
+                    output += str(i) + ". " + item + "\n"
+                if not numbers:
+                    output += item + "\n"
+                i += 1
             return output[:-1]
 
     async def helpmessage(self, message):
@@ -290,11 +295,13 @@ class roleBot(discord.Client):
                 custom = False
                 additions = ""
                 if data["questions"][name]["questiontype"] == "multiple":
-                    additions = "\nPick all of the below that apply, and then press the checkmark"
+                    additions = "\n*Pick all of the below that apply, and then press the checkmark*"
+                elif data["questions"][name]["reactiontype"] in ["unicode", "custom"]:
+                    additions = "\n*Select an icon below that best fits the question*"
                 if data["questions"][name]["reactiontype"] == "text":
                     optionlist = data["questions"][name]["answers"]
-                    optionlist = await self.clean_list(optionlist, newlines=True)
-                    additions = "\n\nPlease reply to the message with one of these options:\n" + optionlist
+                    optionlist = await self.clean_list(optionlist, newlines=True, numbers=True)
+                    additions = "\n\n*Please reply to the message with one of these options:\n" + optionlist + "*"
                 em = discord.Embed(title="Question " + str(i) + "/" + str(totalquestions) + ":", description="\n" + data["questions"][name]["question"] + additions)
                 msg = await targetChannel.send(embed=em)
                 if data["questions"][name]["reactiontype"] == "text":
@@ -306,7 +313,6 @@ class roleBot(discord.Client):
                             usermsg = await client.wait_for('message', check=self.textcheck, timeout=120)
                         except asyncio.TimeoutError:
                             usermsg = None
-                            # returnval = await self.timeout()
                             returnval = await self.timeout()
                             if returnval:
                                 break
@@ -321,17 +327,25 @@ class roleBot(discord.Client):
                         loweranswers = []
                         for item in data["questions"][name]["answers"]:
                             loweranswers.append(item.lower())
-                        if msgcontent.lower() in loweranswers:
+                        indexRange = range(1, len(loweranswers) + 1)
+                        answersRange = []
+                        for item in indexRange:
+                            answersRange.append(str(item))
+                        if msgcontent.lower() in answersRange:
+                            userinput = loweranswers[int(msgcontent) - 1]
+                        else:
+                            userinput = msgcontent.lower()
+                        if userinput in loweranswers:
                             role = discord.utils.get(member.guild.roles, name=data["textrole"])
                             await member.remove_roles(role)
                             if data["questions"][name]["roles"] == 0:
-                                answerIndex = loweranswers.index(msgcontent.lower())
+                                answerIndex = loweranswers.index(userinput)
                                 role = discord.utils.get(member.guild.roles, name=data["questions"][name]["answers"][answerIndex])
                                 if role is not None:
                                     await member.add_roles(role)
                                 break
                             else:
-                                answerIndex = loweranswers.index(msgcontent.lower())
+                                answerIndex = loweranswers.index(userinput)
                                 role = discord.utils.get(member.guild.roles, name=data["questions"][name]["roles"][answerIndex])
                                 if role is not None:
                                     await member.add_roles(role)
@@ -447,6 +461,7 @@ class roleBot(discord.Client):
                 await self.unmute(member)
                 await targetChannel.send("Welcome to " + data["servername"] + ", " + member.mention + ".")
                 await welcomemsg.delete()
+                await self.log("Matchmaking Complete")
                 await self.roleassign(member=member)
 
     async def on_member_join(self, member):
