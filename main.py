@@ -8,6 +8,11 @@ from colorama import Fore, Style
 with open('data.json', 'r') as datafile:
     data = json.loads(datafile.read())
 
+if "redis" in data.keys():
+    import urllib.parse as urlparse
+    import redis
+    global r
+
 token = data["token"]
 
 init()
@@ -72,6 +77,19 @@ class roleBot(discord.Client):
         await self.log('Logged in as:\n' + self.user.name + '\n' + str(self.user.id))
         game = discord.Game(data["botpresence"].replace("{help}", data["commandprefix"] + "help"))
         await client.change_presence(status=discord.Status.online, activity=game)
+        if "redis" in data.keys():
+            global r
+            url = urlparse.urlparse(data["redis"]["url"])
+            if url.port is None:
+                port = data["redis"]["port"]
+            else:
+                port = url.port
+            if url.password is None:
+                password = data["redis"]["password"]
+            else:
+                password = url.password
+            r = redis.Redis(host=url.hostname, port=port, password=password)
+            await self.log("Database imported with keys:\n" + str(r.keys()))
         global matchmaking
         matchmaking = False
         for server in client.guilds:
@@ -107,7 +125,10 @@ class roleBot(discord.Client):
             return output[:-1]
 
     async def helpmessage(self, message):
-        em = discord.Embed(title="**All Commands**", description="\n*Prefix is " + data["commandprefix"] + "*\n**" + data["commandprefix"] + "matchmake**\nRestarts the inital matchmaking process\n**" + data["commandprefix"] + "complain <message>**\nSends a private messaage to moderators\n**" + data["commandprefix"] + "roleassign**\nReassigns custom moderator given roles (won't always work depending on the server)\n**" + data["commandprefix"] + "help**\nDisplays this help message")
+        extrahelp = ""
+        if "redis" in data.keys():
+            extrahelp += data["commandprefix"] + "bio set <message>**\nSets a bio message for your user\n**" + data["commandprefix"] + "bio show <user mention>**\nReturns the mentioned user's bio\n**"
+        em = discord.Embed(title="**All Commands**", description="\n*Prefix is " + data["commandprefix"] + "*\n**" + data["commandprefix"] + "matchmake**\nRestarts the inital matchmaking process\n**" + data["commandprefix"] + "complain <message>**\nSends a private messaage to moderators\n**" + str(extrahelp) + data["commandprefix"] + "roleassign**\nReassigns custom moderator given roles (won't always work depending on the server)\n**" + data["commandprefix"] + "help**\nDisplays this help message")
         await message.channel.send(embed=em)
 
     async def on_message(self, message):
@@ -153,6 +174,8 @@ class roleBot(discord.Client):
                 msglist = message.content.split()
                 if len(msglist) > 0 and msglist[0] == data["commandprefix"] + "complain":
                     await self.complain(message)
+                elif "redis" in data.keys() and len(msglist) >= 3 and msglist[0] == data["commandprefix"] + "bio":
+                    await self.bio(message, msglist)
         else:
             await message.delete()
 
@@ -165,6 +188,34 @@ class roleBot(discord.Client):
         await complaintsChannel.send(embed=em)
         sleep(2)
         await msg.delete()
+
+    async def bio(self, message, msglist):
+        global r
+        if msglist[1] == "set" and len(msglist) >= 3:
+            memberid = str(message.author.id)
+            bio = message.content.replace(data["commandprefix"] + "bio set ", "")
+            await message.delete()
+            r.set(memberid, bio.encode('utf-8'))
+            await self.log("Added new bio, key is: " + str(memberid) + " and bio is: " + str(bio))
+            em = discord.Embed(title="SUCCESS", description="\nBio has been saved to database!")
+            msg = await message.channel.send(embed=em)
+            sleep(2)
+            await msg.delete()
+        if msglist[1] == "show" and len(msglist) == 3:
+            userid = msglist[2].replace("<@", "").replace("!", "").replace(">", "")
+            await self.log("Getting " + str(userid) + "'s bio...")
+            try:
+                bio = r.get(userid).decode('utf-8')
+            except AttributeError:
+                await message.delete()
+                em = discord.Embed(title="ERROR", description="\n" + "Specified member does not have a bio.")
+                msg = await message.channel.send(embed=em)
+                sleep(2)
+                await msg.delete()
+                return
+            user = client.get_user(int(userid))
+            em = discord.Embed(title=user.name + "'s Bio", description="\n" + str(bio))
+            await message.channel.send(embed=em)
 
     async def roleassign(self, member=None, message=None):
         if message is not None:
@@ -480,6 +531,9 @@ class roleBot(discord.Client):
         global msg
         global welcomemsg
         global messageauthor
+        if "redis" in data.keys():
+            global r
+            r.delete(str(member.id))
         if matchmaking:
             if member == messageauthor:
                 matchmaking = False
