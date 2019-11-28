@@ -32,9 +32,13 @@ class roleBot(discord.Client):
     async def mute(self, member: discord.Member):
         global matchmaking
         matchmaking = True
-        role = discord.utils.get(member.guild.roles, name=data["newrole"])
+        roles = []
+        roles.append(discord.utils.get(member.guild.roles, name=data["newrole"]))
+        if "enforcedroles" in data.keys():
+            for role in data["enforcedroles"]:
+                roles.append(discord.utils.get(member.guild.roles, name=role))
         try:
-            await member.edit(roles=[role])
+            await member.edit(roles=roles)
         except discord.errors.NotFound:
             matchmaking = False
         except discord.errors.Forbidden:
