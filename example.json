@@ -25,11 +25,6 @@
     // The role allowing a new member to send messages when asked a text based question, which isn't needed if you don't have
     // any text based questions below
     "textrole": "Text Role",
-    // Auto-give someone specificied roles on matchmaking
-    // Bot wipes all roles with matchmaking, so this
-    // is needed if you want any form of enforced roles
-    // with this bot
-    "enforcedroles": ["Example???"],
     // Currently only allows for usage of bio command, which allows members to create and view other people's bios
     // For example, !bio set hello -> Saved, !bio show @person -> hello
     "redis": {
@@ -48,6 +43,10 @@
         // Specifically on join, and when they type !roleassign
         "Someone#12345": ["role 1", "role 2", "role 3"],
         "0000000000000000000": ["role 3", "role 4"]
+        // Bot wipes all roles with matchmaking, so this
+        // is needed if you want any form of enforced roles
+        // with this bot
+        "everyone": ["Example???"],
     },
     "questions": {
         // This is the main part of the bot

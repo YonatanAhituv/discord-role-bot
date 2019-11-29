@@ -32,23 +32,24 @@ class roleBot(discord.Client):
     async def mute(self, member: discord.Member):
         global matchmaking
         matchmaking = True
-        roles = []
-        roles.append(discord.utils.get(member.guild.roles, name=data["newrole"]))
-        if "enforcedroles" in data.keys():
-            for role in data["enforcedroles"]:
-                roles.append(discord.utils.get(member.guild.roles, name=role))
+        role = discord.utils.get(member.guild.roles, name=data["newrole"])
+        if role is None:
+            await self.log("WARNING:\nCould not find New Member role, make sure \"newrole\" is set in data.json")
+            return
         try:
-            await member.edit(roles=roles)
+           await member.edit(roles=[role])
         except discord.errors.NotFound:
             matchmaking = False
         except discord.errors.Forbidden:
-            await self.log("ERROR:\nNot enough permissions to matchmake, make sure the bots role is at the top")
-            matchmaking = False
+           await self.log("ERROR:\nNot enough permissions to matchmake, make sure the bot's role is at the top")
+           matchmaking = False
 
     async def unmute(self, member: discord.Member):
         global matchmaking
         matchmaking = False
         role = discord.utils.get(member.guild.roles, name=data["newrole"])
+        if role is None:
+            return
         await member.remove_roles(role)
 
     async def emoji_count(self, text):
@@ -233,9 +234,13 @@ class roleBot(discord.Client):
                 membervalue = membername
             if memberIdKeys:
                 membervalue = memberid
-            rolelist = data["assignedroles"][membervalue]
-            rolelist = await self.clean_list(rolelist)
-            for role in data["assignedroles"][membervalue]:
+            givenroles = data["assignedroles"][membervalue].copy()
+            if "everyone" in data["assignedroles"].keys():
+                for role in data["assignedroles"]["everyone"]:
+                    givenroles.append(role)
+            rolelist = await self.clean_list(givenroles)
+            roles = []
+            for role in givenroles:
                 role = discord.utils.get(member.guild.roles, name=role)
                 if role is None:
                     em = discord.Embed(title="ERROR", description="\nFailed to assign the following roles: " + rolelist + ".")
@@ -244,8 +249,10 @@ class roleBot(discord.Client):
                     await msg.delete()
                     message = None
                     break
-                await member.add_roles(role)
+                roles.append(role)
             if message is not None:
+                for role in roles:
+                    await member.add_roles(role)
                 em = discord.Embed(title="SUCCESS", description="\nAssigned the following roles: " + rolelist + ".")
                 msg = await message.channel.send(embed=em)
                 sleep(2)
@@ -305,9 +312,9 @@ class roleBot(discord.Client):
             em = discord.Embed(title="ERROR", description=kickmsg)
             await member.send(embed=em)
             await member.send(data["serverinvite"])
+            await member.kick()
         except discord.errors.Forbidden:
-            pass
-        await member.kick()
+            await self.log("ERROR\nFailed to send message to or kick user: " + str(messageauthor.name))
         return True
 
     async def timeout(self):
