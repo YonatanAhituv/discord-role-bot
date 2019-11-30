@@ -9,7 +9,7 @@ and even an anonymous complaints system.
 
 ### How do I use it?
 It's uses the latest version of discord.py, and works like any other python 
-script, so feel free to run it on Heroku, or on your own home server.
+script, so feel free to run it on any cloud platform, or on your own home server.
 #### What about the JSON?
 There are instructions on how to use the JSON in the example.json file
 that is in the repository, so feel free to modify the example data,
