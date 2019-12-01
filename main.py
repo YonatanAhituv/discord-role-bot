@@ -37,12 +37,12 @@ class roleBot(discord.Client):
             await self.log("WARNING:\nCould not find New Member role, make sure \"newrole\" is set in data.json")
             return
         try:
-           await member.edit(roles=[role])
+            await member.edit(roles=[role])
         except discord.errors.NotFound:
             matchmaking = False
         except discord.errors.Forbidden:
-           await self.log("ERROR:\nNot enough permissions to matchmake, make sure the bot's role is at the top")
-           matchmaking = False
+            await self.log("ERROR:\nNot enough permissions to matchmake, make sure the bot's role is at the top")
+            matchmaking = False
 
     async def unmute(self, member: discord.Member):
         global matchmaking
@@ -229,12 +229,18 @@ class roleBot(discord.Client):
         memberid = str(member.id)
         memberNameKeys = membername in data["assignedroles"].keys()
         memberIdKeys = memberid in data["assignedroles"].keys()
-        if memberNameKeys or memberIdKeys:
+        everyoneKeys = "everyone" in data["assignedroles"].keys()
+        if memberNameKeys or memberIdKeys or everyoneKeys:
             if memberNameKeys:
                 membervalue = membername
-            if memberIdKeys:
+            elif memberIdKeys:
                 membervalue = memberid
-            givenroles = data["assignedroles"][membervalue].copy()
+            else:
+                membervalue = None
+            if membervalue in data["assignedroles"].keys():
+                givenroles = data["assignedroles"][membervalue].copy()
+            else:
+                givenroles = []
             if "everyone" in data["assignedroles"].keys():
                 for role in data["assignedroles"]["everyone"]:
                     givenroles.append(role)
