@@ -231,6 +231,9 @@ class roleBot(discord.Client):
         memberIdKeys = memberid in data["assignedroles"].keys()
         everyoneKeys = "everyone" in data["assignedroles"].keys()
         if memberNameKeys or memberIdKeys or everyoneKeys:
+            await self.log("Member name: " + str(memberNameKeys))
+            await self.log("Member ID: " + str(memberIdKeys))
+            await self.log("Everyone: " + str(everyoneKeys))
             if memberNameKeys:
                 membervalue = membername
             elif memberIdKeys:
@@ -256,9 +259,9 @@ class roleBot(discord.Client):
                     message = None
                     break
                 roles.append(role)
+            for role in roles:
+                await member.add_roles(role)
             if message is not None:
-                for role in roles:
-                    await member.add_roles(role)
                 em = discord.Embed(title="SUCCESS", description="\nAssigned the following roles: " + rolelist + ".")
                 msg = await message.channel.send(embed=em)
                 sleep(2)
