@@ -2,6 +2,7 @@ import redis
 import urllib.parse as urlparse
 import json
 
+
 def redisInit():
     with open('config.json', 'r') as configfile:
         config = json.loads(configfile.read())
@@ -16,6 +17,7 @@ def redisInit():
         password = url.password
     r = redis.Redis(host=url.hostname, port=port, password=password)
     return r
+
 
 def indexDataProcessor(keys, userinput):
     indexes = list(range(1, len(keys) + 1))
@@ -35,6 +37,7 @@ def indexDataProcessor(keys, userinput):
                     targetitem = str(item)
     return targetitem
 
+
 def indexinputs(keys, infomsg, msg):
     indexes = list(range(1, len(keys) + 1))
     print(infomsg)
@@ -52,11 +55,14 @@ def indexinputs(keys, infomsg, msg):
     else:
         return False, userinput
 
+
 def optionfield(keys):
     return indexinputs(keys, "Your options are:", "Pick an option: >>> ")
 
+
 def stringListToList(ilist):
     return json.loads(ilist.replace("'", '"'))
+
 
 def modifybio(bio=""):
     print()
@@ -64,6 +70,7 @@ def modifybio(bio=""):
         print("The current bio is: " + str(bio))
     bio = input("Set Bio To: >>> ")
     return bio
+
 
 def modifyroles(rolelist=[]):
     while True:
@@ -96,11 +103,13 @@ def modifyroles(rolelist=[]):
         elif userinput.lower() == "save and quit":
             return rolelist
 
+
 def dictToUTF8(dictonary):
     finaldict = {}
     for value in dictonary:
         finaldict[str(value, 'utf-8')] = str(dictonary[value], 'utf-8')
     return finaldict
+
 
 def modify(targetitem, new=False):
     if not new:
@@ -150,16 +159,19 @@ def modify(targetitem, new=False):
         elif userinput.lower() == "quit":
             return
 
+
 def getMember(key):
     data = r.hgetall(key)
     user = dictToUTF8(data)
     return user
+
 
 def redisKeys():
     keys = []
     for option in r.keys():
         keys.append(str(option, 'utf-8'))
     return keys
+
 
 def select():
     while True:
@@ -178,14 +190,17 @@ def select():
             return
         modify(targetitem)
 
+
 def add():
     userinput = input("Enter the user ID you would like to put in the database: >>> ")
     modify(str(userinput), new=True)
+
 
 def getList(key):
     rolelist = r.get(key)
     rolelist = stringListToList(str(rolelist, 'utf-8'))
     return rolelist
+
 
 def everyoneroles():
     if "everyone" in redisKeys():
@@ -194,6 +209,7 @@ def everyoneroles():
         rolelist = []
     r.set("everyone", str(modifyroles(rolelist)))
     print()
+
 
 def welcome():
     while True:
@@ -211,6 +227,7 @@ def welcome():
             everyoneroles()
         elif targetitem.lower() == "quit":
             return
+
 
 r = redisInit()
 if __name__ == "__main__":

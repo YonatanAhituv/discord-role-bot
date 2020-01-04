@@ -34,11 +34,13 @@ global custom
 
 matchmaking = False
 
+
 class roleBot(discord.Client):
 
     def getLeaderboard(self):
         global server
-        response = requests.get("http://mee6.xyz/api/plugins/levels/leaderboard/" + str(server.id))
+        baseurl = "http://mee6.xyz/api/plugins/levels/leaderboard/"
+        response = requests.get(baseurl + str(server.id))
         response = json.loads(response.text)
         finaldict = {}
         for item in response["players"]:
@@ -659,6 +661,7 @@ class roleBot(discord.Client):
                         await msg.delete()
                     except NameError:
                         pass
+
 
 client = roleBot()
 client.run(token)
