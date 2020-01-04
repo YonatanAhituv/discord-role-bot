@@ -5,21 +5,28 @@ from time import sleep
 from colorama import init
 from colorama import Fore, Style
 
-with open('data.json', 'r') as datafile:
-    data = json.loads(datafile.read())
+with open('config.json', 'r') as configfile:
+    config = json.loads(configfile.read())
 
-if "redis" in data.keys():
-    import urllib.parse as urlparse
-    import redis
-    global r
+redis = False
+if config["assignedroles"]["db"] or config["bio"]["enabled"] or config["mee6"]["enabled"]:
+    redis = True
+    import db
 
-token = data["token"]
+if config["mee6"]["enabled"]:
+    import requests
+
+token = config["token"]
 
 init()
 
 global targetChannel
 
+global r
+
 global messageauthor
+
+global server
 
 global checkedValue
 
@@ -29,12 +36,45 @@ matchmaking = False
 
 class roleBot(discord.Client):
 
+    def getLeaderboard(self):
+        global server
+        response = requests.get("http://mee6.xyz/api/plugins/levels/leaderboard/" + str(server.id))
+        response = json.loads(response.text)
+        finaldict = {}
+        for item in response["players"]:
+            finaldict[item["id"]] = item["level"]
+        return finaldict
+
+    async def assignLevels(self):
+        await self.log("Checking MEE6 levels...")
+        levels = self.getLeaderboard()
+        for item in list(levels.keys()):
+            if levels[item] < config["mee6"]["level"]:
+                levels.pop(item)
+                continue
+            user = db.getMember(item)
+            if "roles" not in user.keys():
+                user["roles"] = []
+            else:
+                user["roles"] = db.stringListToList(user["roles"])
+            if config["mee6"]["levelrole"] in user["roles"]:
+                levels.pop(item)
+                continue
+            user["roles"].append(config["mee6"]["levelrole"])
+            user["roles"] = str(user["roles"])
+            r.hmset(item, user)
+            member = discord.utils.get(server.members, id=int(item))
+            if member is None:
+                continue
+            await self.roleassign(member=member)
+        await self.log("Checked MEE6 Levels")
+
     async def mute(self, member: discord.Member):
         global matchmaking
         matchmaking = True
-        role = discord.utils.get(member.guild.roles, name=data["newrole"])
+        role = discord.utils.get(member.guild.roles, name=config["matchmaking"]["newrole"])
         if role is None:
-            await self.log("WARNING:\nCould not find New Member role, make sure \"newrole\" is set in data.json")
+            await self.log("WARNING:\nCould not find New Member role, make sure \"newrole\" is set in config.json")
             return
         try:
             await member.edit(roles=[role])
@@ -47,7 +87,7 @@ class roleBot(discord.Client):
     async def unmute(self, member: discord.Member):
         global matchmaking
         matchmaking = False
-        role = discord.utils.get(member.guild.roles, name=data["newrole"])
+        role = discord.utils.get(member.guild.roles, name=config["matchmaking"]["newrole"])
         if role is None:
             return
         await member.remove_roles(role)
@@ -72,41 +112,37 @@ class roleBot(discord.Client):
             finalinfo = finalinfo + Fore.BLUE + "│ " + Style.RESET_ALL + item + " " + Fore.BLUE + " " * spaceLength + "│" + Style.RESET_ALL + "\n"
         finalinfo = finalinfo[:-1]
         info = finalinfo
+        print()
         print(Fore.BLUE + "┌─" + "─" * int(length) + "─┐" + Style.RESET_ALL)
         print(str(info) + Style.RESET_ALL)
         print(Fore.BLUE + "└" + "─" * int(length) + "──┘" + Style.RESET_ALL)
-        print()
 
     async def on_ready(self):
         print()
         await self.log('Logged in as:\n' + self.user.name + '\n' + str(self.user.id))
-        game = discord.Game(data["botpresence"].replace("{help}", data["commandprefix"] + "help"))
+        game = discord.Game(config["botpresence"].replace("{help}", config["commandprefix"] + "help"))
         await client.change_presence(status=discord.Status.online, activity=game)
-        if "redis" in data.keys():
+        if redis:
             global r
-            url = urlparse.urlparse(data["redis"]["url"])
-            if url.port is None:
-                port = data["redis"]["port"]
-            else:
-                port = url.port
-            if url.password is None:
-                password = data["redis"]["password"]
-            else:
-                password = url.password
-            r = redis.Redis(host=url.hostname, port=port, password=password)
+            r = db.redisInit()
             await self.log("Database imported with keys:\n" + str(r.keys()))
         global matchmaking
+        global server
         matchmaking = False
         for server in client.guilds:
             for channel in server.channels:
-                if channel.name == data["targetchannels"]["welcome"]:
-                    global targetChannel
-                    targetChannel = channel
-                    await self.log("Found #" + targetChannel.name + "\n" + str(targetChannel.id))
-                if channel.name == data["targetchannels"]["complaints"]:
-                    global complaintsChannel
-                    complaintsChannel = channel
-                    await self.log("Found #" + complaintsChannel.name + "\n" + str(complaintsChannel.id))
+                if config["matchmaking"]["enabled"]:
+                    if channel.name == config["matchmaking"]["welcomechannel"]:
+                        global targetChannel
+                        targetChannel = channel
+                        await self.log("Found #" + targetChannel.name + "\n" + str(targetChannel.id))
+                if config["complaints"]["enabled"]:
+                    if channel.name == config["complaints"]["complaintschannel"]:
+                        global complaintsChannel
+                        complaintsChannel = channel
+                        await self.log("Found #" + complaintsChannel.name + "\n" + str(complaintsChannel.id))
+        if config["mee6"]["enabled"]:
+            await self.assignLevels()
 
     async def clean_list(self, finput, newlines=False, numbers=False):
         output = ""
@@ -130,10 +166,21 @@ class roleBot(discord.Client):
             return output[:-1]
 
     async def helpmessage(self, message):
-        extrahelp = ""
-        if "redis" in data.keys():
-            extrahelp += data["commandprefix"] + "bio set <message>**\nSets a bio message for your user\n**" + data["commandprefix"] + "bio show <user mention>**\nReturns the mentioned user's bio\n**"
-        em = discord.Embed(title="**All Commands**", description="\n*Prefix is " + data["commandprefix"] + "*\n**" + data["commandprefix"] + "matchmake**\nRestarts the inital matchmaking process\n**" + data["commandprefix"] + "complain <message>**\nSends a private messaage to moderators\n**" + str(extrahelp) + data["commandprefix"] + "roleassign**\nReassigns custom moderator given roles (won't always work depending on the server)\n**" + data["commandprefix"] + "help**\nDisplays this help message")
+        commands = {
+            "matchmaking": "**{}matchmake**\nRestarts the inital matchmaking process",
+            "complaints": "**{}complain <message>**\nSends a private message to moderators",
+            "bio": "**{}bio set <message>**\nSets a bio message for your user\n**{}bio show <user mention>**\nReturns the mentioned user's bio",
+            "assignedroles": "**{}roleassign**\nReassigns custom moderator given roles (won't always work depending on the server)"
+        }
+        info = "*Prefix is {}*"
+        helpmessage = ""
+        helpmessage += info + "\n"
+        for item in commands:
+            if config[item]["enabled"]:
+                helpmessage += commands[item] + "\n"
+        helpmessage += "**{}help**\nDisplays this help message"
+        helpmessage = helpmessage.replace("{}", config["commandprefix"])
+        em = discord.Embed(title="**All Commands**", description=helpmessage)
         await message.channel.send(embed=em)
 
     async def on_message(self, message):
@@ -153,8 +200,10 @@ class roleBot(discord.Client):
         await self.log(finalmsg)
         if dm:
             return
+        if str(message.author.id) == "159985870458322944" and config["mee6"]["enabled"] and message.channel.name == config["mee6"]["levelchannel"]:
+            await self.assignLevels()
         if "new member" not in [role.name.lower() for role in message.author.roles]:
-            if message.content == data["commandprefix"] + "matchmake":
+            if config["matchmaking"]["enabled"] and message.content == config["commandprefix"] + "matchmake":
                 await message.delete()
                 if not matchmaking:
                     em = discord.Embed(title="STATUS", description="\nMatchmaking " + message.author.mention + "...")
@@ -170,22 +219,22 @@ class roleBot(discord.Client):
                     statusmsg = await message.channel.send(embed=em)
                     sleep(2)
                     await statusmsg.delete()
-            elif message.content == data["commandprefix"] + "roleassign":
+            elif config["assignedroles"]["enabled"] and message.content == config["commandprefix"] + "roleassign":
                 await message.delete()
                 await self.roleassign(message=message)
-            elif message.content == data["commandprefix"] + "help":
+            elif message.content == config["commandprefix"] + "help":
                 await self.helpmessage(message)
             else:
                 msglist = message.content.split()
-                if len(msglist) > 0 and msglist[0] == data["commandprefix"] + "complain":
+                if config["complaints"]["enabled"] and len(msglist) > 0 and msglist[0] == config["commandprefix"] + "complain":
                     await self.complain(message)
-                elif "redis" in data.keys() and len(msglist) >= 3 and msglist[0] == data["commandprefix"] + "bio":
+                elif config["bio"]["enabled"] and len(msglist) >= 3 and msglist[0] == config["commandprefix"] + "bio":
                     await self.bio(message, msglist)
         else:
             await message.delete()
 
     async def complain(self, message):
-        complaint = message.content.replace(data["commandprefix"] + "complain ", "")
+        complaint = message.content.replace(config["commandprefix"] + "complain ", "")
         await message.delete()
         em = discord.Embed(title="SUCCESS", description="\nComplaint has been sent to moderators!")
         msg = await message.channel.send(embed=em)
@@ -198,9 +247,11 @@ class roleBot(discord.Client):
         global r
         if msglist[1] == "set" and len(msglist) >= 3:
             memberid = str(message.author.id)
-            bio = message.content.replace(data["commandprefix"] + "bio set ", "")
+            bio = message.content.replace(config["commandprefix"] + "bio set ", "")
             await message.delete()
-            r.set(memberid, bio.encode('utf-8'))
+            user = db.getMember(memberid)
+            user["bio"] = bio
+            r.hmset(memberid, user)
             await self.log("Added new bio, key is: " + str(memberid) + " and bio is: " + str(bio))
             em = discord.Embed(title="SUCCESS", description="\nBio has been saved to database!")
             msg = await message.channel.send(embed=em)
@@ -210,8 +261,9 @@ class roleBot(discord.Client):
             userid = msglist[2].replace("<@", "").replace("!", "").replace(">", "")
             await self.log("Getting " + str(userid) + "'s bio...")
             try:
-                bio = r.get(userid).decode('utf-8')
-            except AttributeError:
+                bio = db.getMember(userid)
+                bio = bio["bio"]
+            except (AttributeError, KeyError):
                 await message.delete()
                 em = discord.Embed(title="ERROR", description="\n" + "Specified member does not have a bio.")
                 msg = await message.channel.send(embed=em)
@@ -223,29 +275,32 @@ class roleBot(discord.Client):
             await message.channel.send(embed=em)
 
     async def roleassign(self, member=None, message=None):
+        if config["assignedroles"]["db"]:
+            await self.dbRoleAssign(member=member, message=message)
+        else:
+            await self.jsonRoleAssign(member=member, message=message)
+
+    async def jsonRoleAssign(self, member=None, message=None):
         if message is not None:
             member = message.author
         membername = str(member)
         memberid = str(member.id)
-        memberNameKeys = membername in data["assignedroles"].keys()
-        memberIdKeys = memberid in data["assignedroles"].keys()
-        everyoneKeys = "everyone" in data["assignedroles"].keys()
+        memberNameKeys = membername in config["assignedroles"].keys()
+        memberIdKeys = memberid in config["assignedroles"].keys()
+        everyoneKeys = "everyone" in config["assignedroles"].keys()
         if memberNameKeys or memberIdKeys or everyoneKeys:
-            await self.log("Member name: " + str(memberNameKeys))
-            await self.log("Member ID: " + str(memberIdKeys))
-            await self.log("Everyone: " + str(everyoneKeys))
             if memberNameKeys:
                 membervalue = membername
             elif memberIdKeys:
                 membervalue = memberid
             else:
                 membervalue = None
-            if membervalue in data["assignedroles"].keys():
-                givenroles = data["assignedroles"][membervalue].copy()
+            if membervalue in config["assignedroles"].keys():
+                givenroles = config["assignedroles"][membervalue].copy()
             else:
                 givenroles = []
-            if "everyone" in data["assignedroles"].keys():
-                for role in data["assignedroles"]["everyone"]:
+            if "everyone" in config["assignedroles"].keys():
+                for role in config["assignedroles"]["everyone"]:
                     givenroles.append(role)
             rolelist = await self.clean_list(givenroles)
             roles = []
@@ -268,7 +323,49 @@ class roleBot(discord.Client):
                 await msg.delete()
         else:
             if message is not None:
-                em = discord.Embed(title="ERROR", description="\nFailed to assign roles, if you think this is an error, please contact " + "<@" + data["admintoken"] + "> to fix this.")
+                em = discord.Embed(title="ERROR", description="\nFailed to assign roles, if you think this is an error, please contact " + "<@" + config["admintoken"] + "> to fix this.")
+                msg = await message.channel.send(embed=em)
+                sleep(2)
+                await msg.delete()
+
+    async def dbRoleAssign(self, member=None, message=None):
+        if message is not None:
+            member = message.author
+        user = db.getMember(str(member.id))
+        roles = db.stringListToList(user["roles"])
+        isMember = "roles" in user.keys()
+        isEveryone = "everyone" in db.redisKeys()
+        if isMember or isEveryone:
+            givenroles = []
+            if isMember:
+                for role in roles:
+                    givenroles.append(role)
+            if isEveryone:
+                everyone = db.getList("everyone")
+                for role in everyone:
+                    givenroles.append(role)
+            rolelist = await self.clean_list(givenroles)
+            roles = []
+            for role in givenroles:
+                role = discord.utils.get(member.guild.roles, name=role)
+                if role is None:
+                    em = discord.Embed(title="ERROR", description="\nFailed to assign the following roles: " + rolelist + ".")
+                    msg = await message.channel.send(embed=em)
+                    sleep(2)
+                    await msg.delete()
+                    message = None
+                    break
+                roles.append(role)
+            for role in roles:
+                await member.add_roles(role)
+            if message is not None:
+                em = discord.Embed(title="SUCCESS", description="\nAssigned the following roles: " + rolelist + ".")
+                msg = await message.channel.send(embed=em)
+                sleep(2)
+                await msg.delete()
+        else:
+            if message is not None:
+                em = discord.Embed(title="ERROR", description="\nFailed to assign roles, if you think this is an error, please contact " + "<@" + config["admintoken"] + "> to fix this.")
                 msg = await message.channel.send(embed=em)
                 sleep(2)
                 await msg.delete()
@@ -320,7 +417,7 @@ class roleBot(discord.Client):
         try:
             em = discord.Embed(title="ERROR", description=kickmsg)
             await member.send(embed=em)
-            await member.send(data["serverinvite"])
+            await member.send(config["serverinvite"])
             await member.kick()
         except discord.errors.Forbidden:
             await self.log("ERROR\nFailed to send message to or kick user: " + str(messageauthor.name))
@@ -342,7 +439,7 @@ class roleBot(discord.Client):
             em = discord.Embed(title="ERROR", description="\nAlready matchmaking someone else, please try again soon!")
             try:
                 await member.send(embed=em)
-                await member.send(data["serverinvite"])
+                await member.send(config["serverinvite"])
             except discord.errors.Forbidden:
                 pass
             await member.kick()
@@ -350,35 +447,35 @@ class roleBot(discord.Client):
         if not member.bot:
             messageauthor = member
             questionSkip = 0
-            totalquestions = len(data["questions"].keys())
+            totalquestions = len(config["matchmaking"]["questions"].keys())
             await self.mute(member)
             if not matchmaking:
                 return
-            welcomemsg = await targetChannel.send(content=member.mention + ", welcome to " + data["servername"] + ". In order to begin, please answer the following questions.")
+            welcomemsg = await targetChannel.send(content=member.mention + ", welcome to " + config["servername"] + ". In order to begin, please answer the following questions.")
             i = 1
-            for name in data["questions"]:
+            for name in config["matchmaking"]["questions"]:
                 if questionSkip > 0:
                     questionSkip -= 1
                     i += 1
                     continue
-                if data["questions"][name]["type"] == "submit":
+                if config["matchmaking"]["questions"][name]["type"] == "submit":
                     break
                 custom = False
                 additions = ""
-                if data["questions"][name]["questiontype"] == "multiple":
+                if config["matchmaking"]["questions"][name]["questiontype"] == "multiple":
                     additions = "\n*Pick all of the below that apply, and then press the checkmark*"
-                elif data["questions"][name]["reactiontype"] in ["unicode", "custom"]:
+                elif config["matchmaking"]["questions"][name]["reactiontype"] in ["unicode", "custom"]:
                     additions = "\n*Select an icon below that best fits the question*"
-                if data["questions"][name]["reactiontype"] == "text":
-                    optionlist = data["questions"][name]["answers"]
+                if config["matchmaking"]["questions"][name]["reactiontype"] == "text":
+                    optionlist = config["matchmaking"]["questions"][name]["answers"]
                     optionlist = await self.clean_list(optionlist, newlines=True, numbers=True)
                     additions = "\n\n*Please reply to the message with one of these options:\n" + optionlist + "*"
-                em = discord.Embed(title="Question " + str(i) + "/" + str(totalquestions) + ":", description="\n" + data["questions"][name]["question"] + additions)
+                em = discord.Embed(title="Question " + str(i) + "/" + str(totalquestions) + ":", description="\n" + config["matchmaking"]["questions"][name]["question"] + additions)
                 msg = await targetChannel.send(embed=em)
-                if data["questions"][name]["reactiontype"] == "text":
+                if config["matchmaking"]["questions"][name]["reactiontype"] == "text":
                     while True:
                         await self.log("Getting user input...")
-                        role = discord.utils.get(member.guild.roles, name=data["textrole"])
+                        role = discord.utils.get(member.guild.roles, name=config["matchmaking"]["textrole"])
                         await member.add_roles(role)
                         try:
                             usermsg = await client.wait_for('message', check=self.textcheck, timeout=120)
@@ -396,7 +493,7 @@ class roleBot(discord.Client):
                         await self.log("Recieved message: " + str(usermsg.content))
                         msgcontent = usermsg.content
                         loweranswers = []
-                        for item in data["questions"][name]["answers"]:
+                        for item in config["matchmaking"]["questions"][name]["answers"]:
                             loweranswers.append(item.lower())
                         indexRange = range(1, len(loweranswers) + 1)
                         answersRange = []
@@ -407,17 +504,17 @@ class roleBot(discord.Client):
                         else:
                             userinput = msgcontent.lower()
                         if userinput in loweranswers:
-                            role = discord.utils.get(member.guild.roles, name=data["textrole"])
+                            role = discord.utils.get(member.guild.roles, name=config["matchmaking"]["textrole"])
                             await member.remove_roles(role)
-                            if data["questions"][name]["roles"] == 0:
+                            if config["matchmaking"]["questions"][name]["roles"] == 0:
                                 answerIndex = loweranswers.index(userinput)
-                                role = discord.utils.get(member.guild.roles, name=data["questions"][name]["answers"][answerIndex])
+                                role = discord.utils.get(member.guild.roles, name=config["matchmaking"]["questions"][name]["answers"][answerIndex])
                                 if role is not None:
                                     await member.add_roles(role)
                                 break
                             else:
                                 answerIndex = loweranswers.index(userinput)
-                                role = discord.utils.get(member.guild.roles, name=data["questions"][name]["roles"][answerIndex])
+                                role = discord.utils.get(member.guild.roles, name=config["matchmaking"]["questions"][name]["roles"][answerIndex])
                                 if role is not None:
                                     await member.add_roles(role)
                                 break
@@ -428,18 +525,18 @@ class roleBot(discord.Client):
                     i += 1
                     continue
                 while True:
-                    if data["questions"][name]["reactiontype"] == "custom":
+                    if config["matchmaking"]["questions"][name]["reactiontype"] == "custom":
                         custom = True
                         emojis = []
-                        for emoji in data["questions"][name]["answers"]:
+                        for emoji in config["matchmaking"]["questions"][name]["answers"]:
                             emojis.append(discord.utils.get(client.emojis, name=emoji))
                     else:
-                        emojis = data["questions"][name]["answers"]
+                        emojis = config["matchmaking"]["questions"][name]["answers"]
                     await self.log("Possibile Responses are:\n" + str(emojis))
                     for emoji in emojis:
                         await msg.add_reaction(emoji)
                     checkedValue = emojis
-                    if data["questions"][name]["questiontype"] == "single":
+                    if config["matchmaking"]["questions"][name]["questiontype"] == "single":
                         try:
                             res = await client.wait_for('reaction_add', check=self.emojicheck, timeout=120)
                         except asyncio.TimeoutError:
@@ -451,16 +548,16 @@ class roleBot(discord.Client):
                                 return
                         res = res[0]
                         answerIndex = []
-                        if data["questions"][name]["reactiontype"] == "custom":
+                        if config["matchmaking"]["questions"][name]["reactiontype"] == "custom":
                             res = res.emoji.name
                             res = res.lower()
                         else:
                             res = res.emoji
-                        if res in data["questions"][name]["answers"]:
-                            answerIndex.append(data["questions"][name]["answers"].index(res))
+                        if res in config["matchmaking"]["questions"][name]["answers"]:
+                            answerIndex.append(config["matchmaking"]["questions"][name]["answers"].index(res))
                             await self.log("Emoji at index:\n" + str(answerIndex))
                             break
-                    if data["questions"][name]["questiontype"] == "multiple":
+                    if config["matchmaking"]["questions"][name]["questiontype"] == "multiple":
                         await msg.add_reaction("✅")
                         response = []
                         answerIndex = []
@@ -471,7 +568,7 @@ class roleBot(discord.Client):
                                 await self.log("Got reaction: " + str(res[0].emoji))
                                 if str(res[0].emoji) == "✅":
                                     break
-                                if data["questions"][name]["reactiontype"] == "custom":
+                                if config["matchmaking"]["questions"][name]["reactiontype"] == "custom":
                                     response.append(str(res[0].emoji.name))
                                 else:
                                     response.append(str(res[0].emoji))
@@ -486,21 +583,21 @@ class roleBot(discord.Client):
                             if not returnval:
                                 return
                         for item in response:
-                            answerIndex.append(data["questions"][name]["answers"].index(item))
+                            answerIndex.append(config["matchmaking"]["questions"][name]["answers"].index(item))
                         break
                 if res is None:
                     msg = res
                     break
                 else:
-                    if data["questions"][name]["type"] == "hybrid":
-                        questiontype = data["questions"][name]["actionassignment"][answerIndex[0]]
+                    if config["matchmaking"]["questions"][name]["type"] == "hybrid":
+                        questiontype = config["matchmaking"]["questions"][name]["actionassignment"][answerIndex[0]]
                     else:
-                        questiontype = data["questions"][name]["type"]
+                        questiontype = config["matchmaking"]["questions"][name]["type"]
                     if questiontype == "role":
-                        if data["questions"][name]["type"] == "hybrid":
-                            rolelist = data["questions"][name]["actions"]
+                        if config["matchmaking"]["questions"][name]["type"] == "hybrid":
+                            rolelist = config["matchmaking"]["questions"][name]["actions"]
                         else:
-                            rolelist = data["questions"][name]["roles"]
+                            rolelist = config["matchmaking"]["questions"][name]["roles"]
                         for item in answerIndex:
                             if rolelist[item] == "":
                                 continue
@@ -509,13 +606,13 @@ class roleBot(discord.Client):
                             await member.add_roles(role)
                     if questiontype == "action":
                         answerIndex = answerIndex[0]
-                        if data["questions"][name]["actions"][answerIndex] != "":
-                            actionList = data["questions"][name]["actions"][answerIndex].split()
-                        if data["questions"][name]["actions"][answerIndex] == "close":
+                        if config["matchmaking"]["questions"][name]["actions"][answerIndex] != "":
+                            actionList = config["matchmaking"]["questions"][name]["actions"][answerIndex].split()
+                        if config["matchmaking"]["questions"][name]["actions"][answerIndex] == "close":
                             await msg.delete()
                             break
-                        if data["questions"][name]["actions"][answerIndex] != "" and actionList[0] == "goto":
-                            questionNames = data["questions"].keys()
+                        if config["matchmaking"]["questions"][name]["actions"][answerIndex] != "" and actionList[0] == "goto":
+                            questionNames = config["matchmaking"]["questions"].keys()
                             increment = 0
                             gotoQuestion = 0
                             for question in questionNames:
@@ -530,20 +627,22 @@ class roleBot(discord.Client):
                 i += 1
             if msg is not None:
                 await self.unmute(member)
-                await targetChannel.send("Welcome to " + data["servername"] + ", " + member.mention + ".")
+                await targetChannel.send("Welcome to " + config["servername"] + ", " + member.mention + ".")
                 await welcomemsg.delete()
                 await self.log("Matchmaking Complete")
-                await self.roleassign(member=member)
+                if config["assignedroles"]["enabled"]:
+                    await self.roleassign(member=member)
 
     async def on_member_join(self, member):
         global welcomemsg
         global msg
         await self.log(str(member) + " has joined the server.")
-        try:
-            await self.matchmake(member)
-        except (KeyError, discord.errors.HTTPException, AttributeError) as e:
-            await self.log("ERROR\n" + str(e))
-            await self.cancelmatchmake("\nSomething went wrong. Try again later.")
+        if config["matchmaking"]["enabled"]:
+            try:
+                await self.matchmake(member)
+            except (KeyError, discord.errors.HTTPException, AttributeError) as e:
+                await self.log("ERROR\n" + str(e))
+                await self.cancelmatchmake("\nSomething went wrong. Try again later.")
 
     async def on_member_remove(self, member):
         await self.log(str(member) + " has left the server.")
@@ -551,17 +650,15 @@ class roleBot(discord.Client):
         global msg
         global welcomemsg
         global messageauthor
-        if "redis" in data.keys():
-            global r
-            r.delete(str(member.id))
-        if matchmaking:
-            if member == messageauthor:
-                matchmaking = False
-                try:
-                    await welcomemsg.delete()
-                    await msg.delete()
-                except NameError:
-                    pass
+        if config["matchmaking"]["enabled"]:
+            if matchmaking:
+                if member == messageauthor:
+                    matchmaking = False
+                    try:
+                        await welcomemsg.delete()
+                        await msg.delete()
+                    except NameError:
+                        pass
 
 client = roleBot()
 client.run(token)

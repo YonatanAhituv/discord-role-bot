@@ -1,0 +1,280 @@
+{
+    "comment": "(Configuration file is loaded from config.json)",
+    "comment": "A discord bot token from the developer portal",
+    "token": "[Insert Bot Token Here]",
+
+    "comment": "The name of the server the bot is running on (used for welcome messages)",
+    "servername": "Example Server",
+
+    "comment": "The prefix before commands, so if it was !, then all commands would",
+    "comment": "need to be used with a ! beforehand, so !complain, !matchmake, etc.",
+    "commandprefix": "!",
+
+    "comment": "Specifies the bots discord presence, {help} gets automatically transformed into",
+    "comment": "the bots current help command based off the command prefix,",
+    "comment": "In this case, the bots presence would look like this:",
+    "comment": "Playing with your roles | !help",
+    "botpresence": "with your roles | {help}",
+
+    "comment": "The id of the admin to contact, you can get this by running the bot without it",
+    "comment": "Then mentioning the admin you want to put in and then grabbing the number that shows up",
+    "comment": "So @someone would show up something like <@000000000000000000>,",
+    "comment": "the zeros being the number you would put in below",
+    "admintoken": "",
+
+    "comment": "Self explanatory, should be a no usage and time limit invite link",
+    "serverinvite": "",
+
+    "comment": "Configures database for usage in bio and database roles if enabled",
+    "redis": {
+        "url": "[Insert REDIS URL here]",
+        "port": "[Insert REDIS port here]",
+        "password": "[Inset REDIS password here]"
+    },
+    "assignedroles": {
+        "comment": "Tells the bot if you want this module enabled or not",
+        "enabled": true,
+
+        "comment": "Tells the bot if you want to assign roles through the database or in the JSON",
+        "db": true,
+
+        "comment": "If 'db' is set to false, this is how you configure roles in JSON mode",
+        "comment": "Put anyones name+id or user id (user id is the better option) in and a list of roles and it'll auto assign it",
+        "comment": "Specifically on join, and when they use the command",
+        "Someone#12345": ["role 1", "role 2", "role 3"],
+        "0000000000000000000": ["role 3", "role 4"],
+
+        "comment": "Bot wipes all roles if matchmaking is enabled, so this",
+        "comment": "is needed if you want any form of enforced roles",
+        "comment": "with matchmaking on",
+        "everyone": ["Example???"]
+    },
+    "bio": {
+        "comment": "This is the bio module, it sets and gives back user-set bio's, redis is required for this one",
+        "comment": "For example, !bio set hello -> Saved, !bio show @person -> hello",
+        "comment": "Tells the bot if you want this module enabled or not",
+        "enabled": true
+    },
+    "complaints": {
+        "comment": "This module sends complaints to a channel",
+        "comment": "And deletes the message where the complaint was sent",
+        "comment": "Tells the bot if you want this module enabled or not",
+        "enabled": true,
+        "comment": "Where to send complaints when a member types !complain",
+        "complaintschannel": "complaints"
+    },
+    "mee6": {
+        "comment": "If you have MEE6 on your server,",
+        "comment": "and use it's level system, this gets around",
+        "comment": "potential conflicts with the bot's matchmaking system",
+        "comment": "by having the bot assign them itself",
+        "comment": "Tells the bot if you want this module enabled or not",
+        "enabled": true,
+
+        "comment": "A level notification channel is required",
+        "levelchannel": "levels",
+
+        "comment": "The threshold level to assign a role at (currently only one potential threshold)",
+        "level": 1,
+
+        "comment": "What role to assign at that level",
+        "levelrole": "Example Role"
+    },
+    "matchmaking": {
+        "comment": "This module asks questions and assigns roles based on the answers",
+        "comment": "Tells the bot if you want this module enabled or not",
+        "enabled": true,
+
+        "comment": "What role to give people upon join",
+        "newrole": "New Member",
+
+        "comment": "What role to give people when they recieve a text question",
+        "textrole": "Text Role",
+
+        "comment": "Where to ask people questions for role assignment",
+        "welcomechannel": "welcome",
+        "questions": {
+            "comment": "These are role assignment questions",
+            "comment": "The key below is not shown to the user and is just in the JSON",
+            "comment": "so don't worry about what it says, it's not a title",
+            "unicoderolequestion": {
+                "comment": "This is the question that will be asked",
+                "question": "Example Question",
+
+                "comment": "There are two types of questions, role and action questions,",
+                "comment": "action is pretty much just used as a continue or stop and will",
+                "comment": "be talked about later, role is used to assign roles, of course",
+                "type": "role",
+
+                "comment": "This specifies how many options can be picked in a question,",
+                "comment": "basically, is this a checkbox question where multiple can be picked",
+                "comment": "or is this a multiple choice question where only one can be picked",
+                "questiontype": "single",
+
+                "comment": "The bot can use both normal and custom emojis, unicode means you'd like",
+                "comment": "to use normal emojis, so you can put just any standard emoji in,",
+                "comment": "while custom is just server emojis if you'd like to add your own",
+                "reactiontype": "unicode",
+
+                "comment": "These are the possible answers the user can respond with",
+                "comment": "Of course, the bot will respond with these before hand,",
+                "comment": "in order to make sure the user knows which ones it needs",
+                "comment": "to respond with",
+                "answers": ["👍", "👎"],
+
+                "comment": "Now, the location of the possible answers and the roles below",
+                "comment": "need to match up, so for example if the user above responds with",
+                "comment": "a thumbs up, since it's the first item in that list,",
+                "comment": "It'll assign them the first item in this list below",
+                "comment": "So the answers should always match up (locationally) with the roles",
+                "roles": ["Example Role", "Example Role 2"]
+            },
+            "customrolequestion": {
+                "comment": "Same thing",
+                "question": "Example Question 2",
+
+                "comment": "Same thing as well",
+                "type": "role",
+
+                "comment": "Same here",
+                "questiontype": "single",
+
+                "comment": "This time custom reactiontype",
+                "reactiontype" : "custom",
+
+                "comment": "Now instead of emojis, you just put in the custom emoji's name",
+                "comment": "So for example if I had one that was called test, and you",
+                "comment": "would just generally use it in the server as :test:,",
+                "comment": "you would just simply type in test, so no colon",
+                "answers": ["test", "test-2"],
+
+                "comment": "Same thing as above",
+                "actions": ["Role 1", " Role 2"]
+            },
+            "actionquestion": {
+                "comment": "Same as earlier",
+                "question": "Do you want to continue?",
+
+                "comment": "This time action type",
+                "type": "action",
+
+                "comment": "Same here",
+                "questiontype": "single",
+
+                "comment": "Same as earlier",
+                "reactiontype": "unicode",
+
+                "comment": "Same here too",
+                "answers": ["👍", "👎"],
+
+                "comment": "Now, close just means to stop all the questions and finish, while nothing",
+                "comment": "just means to continue, this is useful if you want to ask a set of follow up questions,",
+                "comment": "Like, are you intrested in this? If no, close, if yes, put an empty string,",
+                "comment": "then the later questions can ask for more info",
+                "actions": ["", "close"]
+            },
+            "hybridquestion": {
+                "comment": "Same as earlier",
+                "question": "Example 3",
+
+                "comment": "This time hybrid type",
+                "type": "hybrid",
+
+                "comment": "Same thing",
+                "questiontype": "single",
+
+                "comment": "Hybrid allows you to have one answer result in one action and another something else,",
+                "comment": "so for example, if you answer yes, it can give you a role, but if you answer no,",
+                "comment": "it can run an action, in this list, you assign the actions to their type, in the ",
+                "comment": "same organization methodology as the answers and actions lists",
+                "actionassignment": ["role", "action"],
+
+                "comment": "Same as earlier",
+                "reactiontype": "unicode",
+
+                "comment": "Same here too",
+                "answers": ["👍", "👎"],
+
+                "comment": "Now, close just means to stop all the questions and finish, while nothing",
+                "comment": "just means to continue, this is useful if you want to ask a set of follow up questions,",
+                "comment": "Like, are you intrested in this? If no, close, if yes, put an empty string,",
+                "comment": "then the later questions can ask for more info",
+                "actions": ["Example Role", "close"]
+            },
+            "gotoquestion": {
+                "comment": "Same thing",
+                "question": "Do you want to continue?",
+
+                "comment": "Same too",
+                "type": "action",
+
+                "comment": "Same as well",
+                "questiontype": "single",
+
+                "comment": "Same again",
+                "reactiontype": "unicode",
+
+                "comment": "Again, same thing",
+                "answers": ["👍", "👎"],
+
+                "comment": "Now a goto action, in order to use a goto, you type in 'goto' and then follow that by",
+                "comment": "question name, so for example, if this was a different question and I wanted to go to this one,",
+                "comment": "I would type in 'goto gotoquestion' and it would skip ahead to that",
+                "actions": ["goto testquestion", ""]
+            },
+            "checklistquestion": {
+                "comment": "Same here",
+                "question": "Example Question 5000.23",
+
+                "comment": "Yup",
+                "type": "role",
+
+                "comment": "This is different, basically, now instead of just reacting with the emojis in the 'answers' list,",
+                "comment": "it will react with an additional checkmark at the end, so that users can pick as many options",
+                "comment": "from the answers list and then hit the checkmark when done in order to assign a large",
+                "comment": "number of roles at once.",
+                "questiontype": "multiple",
+
+                "comment": "Yeah",
+                "reactiontype": "unicode",
+
+                "comment": "Same thing",
+                "answers": ["📊", "📈", "📏", "👍"],
+
+                "comment": "You get the idea",
+                "roles": ["Role 1", "Role 2", "Role 3", "Role 4"]
+            },
+            "autosubmitquestions": {
+                "comment": "Title says all. Questions that immediently submit when reached",
+                "type": "submit"
+            },
+            "textquestion": {
+                "comment": "Same thing",
+                "question": "Pick an option",
+
+                "comment": "Can be set as needed",
+                "type": "role",
+
+                "comment": "Same again",
+                "questiontype": "single",
+
+                "comment": "Now reactiontype is text",
+                "reactiontype": "text",
+
+                "comment": "Below you can put a list of answers that the bot will prompt for",
+                "answers": ["test1", "test2", "test3", "test4", "test5"],
+
+                "comment": "Now while roles can be used the exact same way here as above, (align the role with the answer's index)",
+                "comment": "theres a more compact way to use it, in case the role names exactly match the answers,",
+                "comment": "so by using 0 in roles, it'll just assign roles from the answers, so for example in this case,",
+                "comment": "if someone were to pick test3, it would assign the role test3 without needing to duplicate it below",
+                "roles": 0
+            },
+            "comment": "Now I've mainly used these role assignments to:",
+            "comment": "A. Create private channels that people can get assigned to based on their intrests",
+            "comment": "B. Create some sort of role that people can @ to ask them questions about the topic their role is setup for",
+            "comment": "C. Create seperated areas on the member list, based off of peoples opinions and intrests",
+            "comment": "But thats just some ideas, theres plenty of other things you can do"
+        }
+    }
+}
