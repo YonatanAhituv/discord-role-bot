@@ -127,7 +127,7 @@ class roleBot(discord.Client):
         if redis:
             global r
             r = db.redisInit()
-            await self.log("Database imported with keys:\n" + str(r.keys()))
+            await self.log("Database imported with " + str(len(r.keys())) + " keys")
         global matchmaking
         global server
         matchmaking = False
