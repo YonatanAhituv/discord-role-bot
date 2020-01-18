@@ -235,6 +235,34 @@ class roleBot(discord.Client):
         else:
             await message.delete()
 
+    async def on_raw_reaction_add(self, payload):
+        if not config["reactionlimits"]["enabled"]:
+            return
+        targetpoll = {}
+        for poll in config["reactionlimits"]["polls"]:
+            if str(payload.message_id) == config["reactionlimits"]["polls"][poll]["messageid"] and str(payload.channel_id) == config["reactionlimits"]["polls"][poll]["reactionchannel"]:
+                targetpoll = config["reactionlimits"]["polls"][poll]
+        for server in client.guilds:
+            for channel in server.channels:
+                if str(channel.id) == targetpoll["reactionchannel"]:
+                    global reactionChannel
+                    reactionChannel = channel
+        reactionMessage = await reactionChannel.fetch_message(targetpoll["messageid"])
+        if payload.message_id == reactionMessage.id:
+            i = 0
+            userIDList = []
+            for reaction in reactionMessage.reactions:
+                users = await reaction.users().flatten()
+                for user in users:
+                    userIDList.append(user.id)
+            for user in userIDList:
+                if payload.user_id == user:
+                    i += 1
+            if i > targetpoll["limit"]:
+                member = discord.utils.get(server.members, id=int(payload.user_id))
+                for reaction in reactionMessage.reactions:
+                    await reaction.remove(member)
+
     async def complain(self, message):
         complaint = message.content.replace(config["commandprefix"] + "complain ", "")
         await message.delete()

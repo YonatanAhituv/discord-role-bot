@@ -80,6 +80,28 @@
         "comment": "What role to assign at that level",
         "levelrole": "Example Role"
     },
+    "reactionlimits": {
+        "comment": "WARNING: This module is currently expiremental and will be expanded in the future,",
+
+        "comment": "This module limits reactions on a specififed message,",
+        "comment": "When this module detects more than n reactions on a message by one user",
+        "comment": "It removes all of their reactions",
+        "enabled": true,
+
+        "polls": {
+            "commment": "The key below doesn't matter",
+            "admin-elections": {
+                "comment": "The channel ID of the message",
+                "reactionchannel": "666853217400913930",
+
+                "comment": "The ID of the message",
+                "messageid": "667552852616544260",
+
+                "comment": "The amount to limit each user's reactions to",
+                "limit": 2    
+            }
+        }
+    },
     "matchmaking": {
         "comment": "This module asks questions and assigns roles based on the answers",
         "comment": "Tells the bot if you want this module enabled or not",
