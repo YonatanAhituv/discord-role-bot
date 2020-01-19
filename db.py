@@ -21,20 +21,19 @@ def redisInit():
 
 def indexDataProcessor(keys, userinput):
     indexes = list(range(1, len(keys) + 1))
-    try:
-        if int(userinput) in indexes:
-            i = 1
-            targetitem = ""
-            for item in keys:
-                if i == int(userinput):
-                    targetitem = str(item)
-                i += 1
-    except ValueError:
-        if userinput in keys:
-            targetitem = ""
-            for item in keys:
-                if item.lower() == userinput.lower():
-                    targetitem = str(item)
+    targetitem = ""
+    indexes = [str(val) for val in indexes]
+    keys = [val.lower() for val in keys]
+    if userinput in indexes:
+        i = 1
+        for item in keys:
+            if i == int(userinput):
+                targetitem = str(item)
+            i += 1
+    elif userinput.lower() in keys:
+        for item in keys:
+            if item.lower() == userinput.lower():
+                targetitem = str(item)
     return targetitem
 
 
@@ -46,11 +45,9 @@ def indexinputs(keys, infomsg, msg):
         print(str(i) + ": " + str(item))
         i += 1
     userinput = input(msg)
-    try:
-        intinput = int(userinput)
-    except ValueError:
-        intinput = False
-    if userinput.lower() in keys or intinput in indexes:
+    keys = [val.lower() for val in keys]
+    indexes = [str(val) for val in indexes]
+    if userinput.lower() in keys or userinput in indexes:
         return True, userinput
     else:
         return False, userinput
