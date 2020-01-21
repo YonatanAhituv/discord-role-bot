@@ -29,7 +29,6 @@
         "comment": "The contents of the presence, self-explainatory",
         "message": "your roles | {help}"
     },
-
     "comment": "Configures database for usage in bio and database roles if enabled",
     "redis": {
         "url": "[Insert REDIS URL here]",
