@@ -122,8 +122,9 @@ class roleBot(discord.Client):
     async def on_ready(self):
         print()
         await self.log('Logged in as:\n' + self.user.name + '\n' + str(self.user.id))
-        game = discord.Game(config["botpresence"].replace("{help}", config["commandprefix"] + "help"))
-        await client.change_presence(status=discord.Status.online, activity=game)
+        # game = discord.Game(config["botpresence"].replace("{help}", config["commandprefix"] + "help"))
+        activity = discord.Activity(name=config["presence"]["message"].replace("{help}", config["commandprefix"] + "help"), type=config["presence"]["type"])
+        await client.change_presence(status=discord.Status.online, activity=activity)
         if redis:
             global r
             r = db.redisInit()

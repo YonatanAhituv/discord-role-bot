@@ -10,12 +10,6 @@
     "comment": "need to be used with a ! beforehand, so !complain, !matchmake, etc.",
     "commandprefix": "!",
 
-    "comment": "Specifies the bots discord presence, {help} gets automatically transformed into",
-    "comment": "the bots current help command based off the command prefix,",
-    "comment": "In this case, the bots presence would look like this:",
-    "comment": "Playing with your roles | !help",
-    "botpresence": "with your roles | {help}",
-
     "comment": "The id of the admin to contact, you can get this by running the bot without it",
     "comment": "Then mentioning the admin you want to put in and then grabbing the number that shows up",
     "comment": "So @someone would show up something like <@000000000000000000>,",
@@ -24,6 +18,17 @@
 
     "comment": "Self explanatory, should be a no usage and time limit invite link",
     "serverinvite": "",
+
+    "presence": {
+        "comment": "This module gives the bot a discord presence",
+        "enabled": true,
+
+        "comment": "The type of presence, this should just be a number (expirement with it to see the different types)",
+        "type": 3,
+
+        "comment": "The contents of the presence, self-explainatory",
+        "message": "your roles | {help}"
+    },
 
     "comment": "Configures database for usage in bio and database roles if enabled",
     "redis": {
