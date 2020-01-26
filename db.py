@@ -23,14 +23,13 @@ def indexDataProcessor(keys, userinput):
     indexes = list(range(1, len(keys) + 1))
     targetitem = ""
     indexes = [str(val) for val in indexes]
-    keys = [val.lower() for val in keys]
-    if userinput in indexes:
+    if userinput.lower() in indexes:
         i = 1
         for item in keys:
             if i == int(userinput):
                 targetitem = str(item)
             i += 1
-    elif userinput.lower() in keys:
+    elif userinput.lower() in [val.lower() for val in keys]:
         for item in keys:
             if item.lower() == userinput.lower():
                 targetitem = str(item)
@@ -94,9 +93,14 @@ def modifyroles(rolelist=[]):
             done = False
             while not done:
                 done, userinput = indexinputs(rolelist, "Your options are: ", "Pick a role to delete: >>> ")
-            userinput = indexDataProcessor(rolelist, userinput)
-            targetindex = rolelist.index(userinput)
-            del rolelist[targetindex]
+                userinput = indexDataProcessor(rolelist, userinput)
+                print(str(rolelist))
+                print(str(userinput))
+                if userinput in rolelist:
+                    targetindex = rolelist.index(userinput)
+                    del rolelist[targetindex]
+                else:
+                    done = False
         elif userinput.lower() == "save and quit":
             return rolelist
 
@@ -126,9 +130,9 @@ def modify(targetitem, new=False):
         userinput = indexDataProcessor(keys, userinput)
         if userinput.lower() == "change roles":
             if "roles" in finaldict.keys():
-                finaldict["roles"] = modifyroles(stringListToList(finaldict["roles"]))
+                finaldict["roles"] = str(modifyroles(stringListToList(finaldict["roles"])))
             else:
-                finaldict["roles"] = modifyroles()
+                finaldict["roles"] = str(modifyroles())
             newdict = getMember(targetitem)
             newdict["roles"] = str(finaldict["roles"])
             r.hmset(targetitem, newdict)
