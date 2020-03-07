@@ -94,8 +94,6 @@ def modifyroles(rolelist=[]):
             while not done:
                 done, userinput = indexinputs(rolelist, "Your options are: ", "Pick a role to delete: >>> ")
                 userinput = indexDataProcessor(rolelist, userinput)
-                print(str(rolelist))
-                print(str(userinput))
                 if userinput in rolelist:
                     targetindex = rolelist.index(userinput)
                     del rolelist[targetindex]
