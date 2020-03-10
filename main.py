@@ -363,12 +363,12 @@ class roleBot(discord.Client):
         if message is not None:
             member = message.author
         user = db.getMember(str(member.id))
-        roles = db.stringListToList(user["roles"])
         isMember = "roles" in user.keys()
         isEveryone = "everyone" in db.redisKeys()
         if isMember or isEveryone:
             givenroles = []
             if isMember:
+                roles = db.stringListToList(user["roles"])
                 for role in roles:
                     givenroles.append(role)
             if isEveryone:
@@ -380,11 +380,12 @@ class roleBot(discord.Client):
             for role in givenroles:
                 role = discord.utils.get(member.guild.roles, name=role)
                 if role is None:
-                    em = discord.Embed(title="ERROR", description="\nFailed to assign the following roles: " + rolelist + ".")
-                    msg = await message.channel.send(embed=em)
-                    sleep(2)
-                    await msg.delete()
-                    message = None
+                    if message is not None:
+                        em = discord.Embed(title="ERROR", description="\nFailed to assign the following roles: " + rolelist + ".")
+                        msg = await message.channel.send(embed=em)
+                        sleep(2)
+                        await msg.delete()
+                        message = None
                     break
                 roles.append(role)
             for role in roles:
