@@ -1,11 +1,63 @@
 import redis
 import urllib.parse as urlparse
 import json
+import discord
+
+with open('config.json', 'r') as configfile:
+    config = json.loads(configfile.read())
+
+
+class MyClient(discord.Client):
+
+    async def deleteMessage(self, messageID, channel):
+        msg = await channel.fetch_message(messageID)
+        await msg.delete()
+
+    async def manage(self):
+        info = """Welcome to Discord Bot Control.
+Commands:
+* !switch - Switch channels
+* !delete - Delete a message
+* !quit - Return to main menu"""
+        print(info)
+        while True:
+            categoryName = input("Pick a category: >>> ")
+            for server in client.guilds:
+                for category in server.channels:
+                    if str(category.type) == "category":
+                        if category.name.lower() == categoryName.lower():
+                            channelName = input("Pick a channel: >>> ")
+                            for channel in category.channels:
+                                if channelName.lower() == channel.name:
+                                    targetChannel = channel
+                                    while True:
+                                        userinput = input(category.name + " -> #" + str(channel.name) + ": >>> ").replace('\\n', '\n')
+                                        if userinput == "!switch":
+                                            break
+                                        elif userinput == "!leave":
+                                            currentGuild = None
+                                            for guild in client.guilds:
+                                                currentGuild = guild
+                                            await self.leave_in_protest(targetChannel, currentGuild)
+                                        elif userinput == "!delete":
+                                            messageID = input("Message ID: >>> ")
+                                            await self.deleteMessage(messageID, targetChannel)
+                                        elif userinput == "!quit":
+                                            await client.logout()
+                                        elif userinput[0] == "@":
+                                            mention = userinput.split(" ")[0]
+                                            for member in server.members:
+                                                if mention.replace("@", "").lower() == member.name.split("#", 3)[0].lower() or mention.replace("@", "").lower() == str(member.nick).split("#", 3)[0].lower():
+                                                    await targetChannel.send("<@" + str(member.id) + ">" + userinput.replace(mention, ""))
+                                        else:
+                                            await targetChannel.send(userinput)
+
+    async def on_ready(self):
+        print('Logged in as ' + self.user.name)
+        await self.manage()
 
 
 def redisInit():
-    with open('config.json', 'r') as configfile:
-        config = json.loads(configfile.read())
     url = urlparse.urlparse(config["redis"]["url"])
     if url.port is None:
         port = config["redis"]["port"]
@@ -213,7 +265,7 @@ def everyoneroles():
 def welcome():
     while True:
         print("---Welcome to Discord Role Managment Bot Control Panel!---")
-        keys = ["Modify", "Add", "Enforce Roles", "Quit"]
+        keys = ["Modify", "Add", "Enforce Roles", "Control Bot", "Quit"]
         done = False
         while not done:
             done, userinput = optionfield(keys)
@@ -224,10 +276,14 @@ def welcome():
             add()
         elif targetitem.lower() == "enforce roles":
             everyoneroles()
+        elif targetitem.lower() == "control bot":
+            token = config["token"]
+            client.run(token)
         elif targetitem.lower() == "quit":
             return
 
 
 r = redisInit()
 if __name__ == "__main__":
+    client = MyClient()
     welcome()
