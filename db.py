@@ -32,7 +32,9 @@ Commands:
                                     targetChannel = channel
                                     while True:
                                         userinput = input(category.name + " -> #" + str(channel.name) + ": >>> ").replace('\\n', '\n')
-                                        if userinput == "!switch":
+                                        if userinput == "":
+                                            continue
+                                        elif userinput == "!switch":
                                             break
                                         elif userinput == "!leave":
                                             currentGuild = None
@@ -44,12 +46,18 @@ Commands:
                                             await self.deleteMessage(messageID, targetChannel)
                                         elif userinput == "!quit":
                                             await client.logout()
-                                        elif userinput[0] == "@":
-                                            mention = userinput.split(" ")[0]
-                                            for member in server.members:
-                                                if mention.replace("@", "").lower() == member.name.split("#", 3)[0].lower() or mention.replace("@", "").lower() == str(member.nick).split("#", 3)[0].lower():
-                                                    await targetChannel.send("<@" + str(member.id) + ">" + userinput.replace(mention, ""))
                                         else:
+                                            if "@" in userinput:
+                                                mentionSplitList = userinput.split(" ")
+                                                mentionList = []
+                                                for word in mentionSplitList:
+                                                    if word[0] == "@":
+                                                        mentionList.append(word)
+                                                for mention in mentionList:
+                                                    for member in server.members:
+                                                        if mention.replace("@", "").lower() == member.name.split("#", 3)[0].lower() or mention.replace("@", "").lower() == str(member.nick).split("#", 3)[0].lower():
+                                                            userinput = userinput.replace(mention, "<@" + str(member.id) + ">")
+                                                            break
                                             await targetChannel.send(userinput)
 
     async def on_ready(self):
