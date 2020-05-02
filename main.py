@@ -301,8 +301,8 @@ class roleBot(discord.Client):
                 sleep(2)
                 await msg.delete()
                 return
-            user = client.get_user(int(userid))
-            em = discord.Embed(title=user.name + "'s Bio", description="\n" + str(bio))
+            user = discord.utils.get(client.get_all_members(), id=int(userid))
+            em = discord.Embed(title=user.display_name + "'s Bio", description="\n" + str(bio))
             await message.channel.send(embed=em)
 
     async def roleassign(self, member=None, message=None):

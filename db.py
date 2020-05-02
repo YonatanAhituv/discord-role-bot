@@ -10,7 +10,11 @@ with open('config.json', 'r') as configfile:
 class MyClient(discord.Client):
 
     async def deleteMessage(self, messageID, channel):
-        msg = await channel.fetch_message(messageID)
+        try:
+            msg = await channel.fetch_message(messageID)
+        except (discord.errors.NotFound, discord.errors.HTTPException):
+            print("Cannot find specified message")
+            return
         await msg.delete()
 
     async def manage(self):
