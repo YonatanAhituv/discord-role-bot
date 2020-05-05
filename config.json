@@ -64,6 +64,10 @@
         "comment": "And deletes the message where the complaint was sent",
         "comment": "Tells the bot if you want this module enabled or not",
         "enabled": true,
+
+        "comment": "If the bot should anonymize user complaints",
+        "anonymized": true,
+
         "comment": "Where to send complaints when a member types !complain",
         "complaintschannel": "complaints"
     },

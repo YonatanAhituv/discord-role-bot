@@ -265,11 +265,15 @@ class roleBot(discord.Client):
                     await reaction.remove(member)
 
     async def complain(self, message):
+        if config["complaints"]["anonymized"]:
+            title = "**Complaint Recieved**"
+        else:
+            title = "**Complaint Recieved From: ** " + message.author.display_name
         complaint = message.content.replace(config["commandprefix"] + "complain ", "")
         await message.delete()
         em = discord.Embed(title="SUCCESS", description="\nComplaint has been sent to moderators!")
         msg = await message.channel.send(embed=em)
-        em = discord.Embed(title="Complaint Recieved", description="\n" + str(complaint))
+        em = discord.Embed(title=title, description="\n" + str(complaint))
         await complaintsChannel.send(embed=em)
         sleep(2)
         await msg.delete()
