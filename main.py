@@ -256,11 +256,14 @@ class roleBot(discord.Client):
                 users = await reaction.users().flatten()
                 for user in users:
                     userIDList.append(user.id)
-            for user in userIDList:
-                if payload.user_id == user:
+            for userID in userIDList:
+                if payload.user_id == userID:
                     i += 1
-            if i > targetpoll["limit"]:
-                member = discord.utils.get(server.members, id=int(payload.user_id))
+            member = discord.utils.get(server.members, id=int(payload.user_id))
+            memberRoles = []
+            for role in member.roles:
+                memberRoles.append(role.name)
+            if i > targetpoll["limit"] or any(elem in targetpoll["bannedroles"] for elem in memberRoles):
                 for reaction in reactionMessage.reactions:
                     await reaction.remove(member)
 
