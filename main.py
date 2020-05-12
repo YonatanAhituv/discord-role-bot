@@ -245,13 +245,14 @@ class roleBot(discord.Client):
         for role in member.roles:
             memberRoles.append(role.name)
         targetpoll = {}
-        for poll in config["reactionlimits"]["polls"]:
-            if str(payload.message_id) == config["reactionlimits"]["polls"][poll]["messageid"] and str(payload.channel_id) == config["reactionlimits"]["polls"][poll]["reactionchannel"]:
-                targetpoll = config["reactionlimits"]["polls"][poll]
-            elif any(elem in config["reactionlimits"]["bannedroles"] for elem in memberRoles):
-                targetpoll["reactionchannel"] = str(payload.channel_id)
-                targetpoll["messageid"] = str(payload.message_id)
-                targetpoll["limit"] = 0
+        if any(elem in config["reactionlimits"]["bannedroles"] for elem in memberRoles) and not any(elem in config["reactionlimits"]["bypassroles"] for elem in memberRoles):
+            targetpoll["reactionchannel"] = str(payload.channel_id)
+            targetpoll["messageid"] = str(payload.message_id)
+            targetpoll["limit"] = 0
+        elif "polls" in config["reactionlimits"].keys():
+            for poll in config["reactionlimits"]["polls"]:
+                if str(payload.message_id) == config["reactionlimits"]["polls"][poll]["messageid"] and str(payload.channel_id) == config["reactionlimits"]["polls"][poll]["reactionchannel"]:
+                    targetpoll = config["reactionlimits"]["polls"][poll]
         if targetpoll == {}:
             return
         for channel in server.channels:

@@ -99,6 +99,10 @@
         "comment": "Completely blocks specififed roles from reacting to messages",
         "bannedroles": ["BannedRole"],
 
+        "comment": "Bypasses banned role limitations if user has specififed roles",
+        "comment": "WARNING: Does not bypass poll limits",
+        "bypassroles": ["Admin"],
+
         "polls": {
             "commment": "The key below doesn't matter",
             "admin-elections": {
