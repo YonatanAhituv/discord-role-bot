@@ -239,16 +239,25 @@ class roleBot(discord.Client):
     async def on_raw_reaction_add(self, payload):
         if not config["reactionlimits"]["enabled"]:
             return
+        server = client.guilds[0]
+        member = discord.utils.get(server.members, id=int(payload.user_id))
+        memberRoles = []
+        for role in member.roles:
+            memberRoles.append(role.name)
         targetpoll = {}
         for poll in config["reactionlimits"]["polls"]:
             if str(payload.message_id) == config["reactionlimits"]["polls"][poll]["messageid"] and str(payload.channel_id) == config["reactionlimits"]["polls"][poll]["reactionchannel"]:
                 targetpoll = config["reactionlimits"]["polls"][poll]
-        for server in client.guilds:
-            for channel in server.channels:
-                if str(channel.id) == targetpoll["reactionchannel"]:
-                    global reactionChannel
-                    reactionChannel = channel
-        reactionMessage = await reactionChannel.fetch_message(targetpoll["messageid"])
+            elif any(elem in config["reactionlimits"]["bannedroles"] for elem in memberRoles):
+                targetpoll["reactionchannel"] = str(payload.channel_id)
+                targetpoll["messageid"] = str(payload.message_id)
+                targetpoll["limit"] = 0
+        if targetpoll == {}:
+            return
+        for channel in server.channels:
+            if str(channel.id) == targetpoll["reactionchannel"]:
+                reactionMessage = await channel.fetch_message(targetpoll["messageid"])
+                break
         if payload.message_id == reactionMessage.id:
             i = 0
             userIDList = []
@@ -259,10 +268,6 @@ class roleBot(discord.Client):
             for userID in userIDList:
                 if payload.user_id == userID:
                     i += 1
-            member = discord.utils.get(server.members, id=int(payload.user_id))
-            memberRoles = []
-            for role in member.roles:
-                memberRoles.append(role.name)
             if i > targetpoll["limit"] or any(elem in targetpoll["bannedroles"] for elem in memberRoles):
                 for reaction in reactionMessage.reactions:
                     await reaction.remove(member)

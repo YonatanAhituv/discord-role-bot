@@ -96,6 +96,9 @@
         "comment": "It removes all of their reactions",
         "enabled": true,
 
+        "comment": "Completely blocks specififed roles from reacting to messages",
+        "bannedroles": ["BannedRole"],
+
         "polls": {
             "commment": "The key below doesn't matter",
             "admin-elections": {
@@ -106,7 +109,7 @@
                 "messageid": "667552852616544260",
 
                 "comment": "Ban certain roles from reacting to the message",
-                "bannedroles": ["bannedRole"],
+                "bannedroles": ["BannedRole"],
 
                 "comment": "The amount to limit each user's reactions to",
                 "limit": 2    
