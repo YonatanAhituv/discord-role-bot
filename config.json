@@ -115,6 +115,9 @@
                 "comment": "Ban certain roles from reacting to the message",
                 "bannedroles": ["BannedRole"],
 
+                "comment": "Bypasses banned roles if user has specififed roles",
+                "bypasssroles": ["Admin"],
+
                 "comment": "The amount to limit each user's reactions to",
                 "limit": 2    
             }

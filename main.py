@@ -269,7 +269,7 @@ class roleBot(discord.Client):
             for userID in userIDList:
                 if payload.user_id == userID:
                     i += 1
-            if i > targetpoll["limit"] or any(elem in targetpoll["bannedroles"] for elem in memberRoles):
+            if i > targetpoll["limit"] or (any(elem in targetpoll["bannedroles"] for elem in memberRoles) and not any(elem in targetpoll["bypassroles"] for elem in memberRoles)):
                 for reaction in reactionMessage.reactions:
                     await reaction.remove(member)
 
