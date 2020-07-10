@@ -7,6 +7,51 @@ with open('config.json', 'r') as configfile:
     config = json.loads(configfile.read())
 
 
+userDict = {
+    "title": "User",
+    "titleMappings": {
+        "roles": "Roles",
+        "bio": "Bio",
+    },
+    "inputMappings": {
+        "Change Roles": "roles",
+        "Change Bio": "bio"
+    },
+    "typeMap": {
+        "roles": "list",
+        "bio": "string"
+    }
+}
+
+
+reactionDict = {
+    "title": "Reaction Limit",
+    "titleMappings": {
+        "reactionchannel": "Channel ID",
+        "messageid": "Message ID",
+        "bannedroles": "Banned Roles",
+        "bypassroles": "Bypass Roles",
+        "limit": "Limit"
+    },
+    "inputMappings": {
+        "Set Channel ID": "reactionchannel",
+        "Set Message ID": "messageid",
+        "Change Banned Roles": "bannedroles",
+        "Change Bypass Roles": "bypassroles",
+        "Change Reaction Limit": "limit"
+    },
+    "typeMap": {
+        "reactionchannel": "string",
+        "messageid": "string",
+        "bannedroles": "list",
+        "bypassroles": "list",
+        "limit": "int"
+    },
+}
+
+hiddenKeys = ["everyone", "reactPass", "reactBan"]
+
+
 class MyClient(discord.Client):
 
     async def deleteMessage(self, messageID, channel):
@@ -124,47 +169,61 @@ def stringListToList(ilist):
     return json.loads(ilist.replace("'", '"'))
 
 
-def modifybio(bio=""):
+def modifyString(title, string=""):
     print()
-    if bio != "":
-        print("The current bio is: " + str(bio))
-    bio = input("Set Bio To: >>> ")
-    return bio
+    if string != "":
+        print("The current value is: " + str(string))
+    string = input("Set " + title + " To: >>> ")
+    return string
 
 
-def modifyroles(rolelist=[]):
+def modifyInt(title, number=-1):
+    print()
+    if number != -1:
+        print("The current value is: " + str(number))
+    while True:
+        number = input("Set " + title + " To: >>> ")
+        if number.isnumeric():
+            number = int(number)
+            break
+        else:
+            print("That is not a number!")
+    return number
+
+
+def modifyList(title, targetList=[]):
     while True:
         print()
-        print("Roles: " + str(rolelist))
+        print(title + ": " + str(targetList))
         keys = ["Add", "Set", "Delete", "Save and Quit"]
         done = False
         while not done:
             done, userinput = optionfield(keys)
         userinput = indexDataProcessor(keys, userinput)
         if userinput.lower() == "add":
-            userinput = input("New Role: >>> ")
-            rolelist.append(userinput)
+            userinput = input("New Item: >>> ")
+            targetList.append(userinput)
         elif userinput.lower() == "set":
             while True:
-                userinput = input("New Role List: >>> ")
+                userinput = input("New List: >>> ")
                 try:
                     userinput = stringListToList(userinput)
                     break
                 except json.decoder.JSONDecodeError:
                     print("Invalid List! Try again.")
-            rolelist = userinput
+            targetList = userinput
         elif userinput.lower() == "delete":
             done = False
             while not done:
-                done, userinput = indexinputs(rolelist, "Your options are: ", "Pick a role to delete: >>> ")
-                userinput = indexDataProcessor(rolelist, userinput)
-                if userinput in rolelist:
-                    targetindex = rolelist.index(userinput)
-                    del rolelist[targetindex]
+                done, userinput = indexinputs(targetList, "Your options are: ", "Pick an item to delete: >>> ")
+                userinput = indexDataProcessor(targetList, userinput)
+                if userinput in targetList:
+                    targetindex = targetList.index(userinput)
+                    del targetList[targetindex]
                 else:
                     done = False
         elif userinput.lower() == "save and quit":
-            return rolelist
+            return targetList
 
 
 def dictToUTF8(dictonary):
@@ -174,39 +233,52 @@ def dictToUTF8(dictonary):
     return finaldict
 
 
-def modify(targetitem, new=False):
+def modify(targetitem, metaDict, new=False):
     if not new:
-        finaldict = getMember(targetitem)
+        finaldict = getDict(targetitem)
     elif new:
         finaldict = {}
     while True:
         done = False
         print()
         if not finaldict == {}:
-            print("User Contents:")
+            print(metaDict["title"] + " Contents:")
             for value in finaldict:
-                print(str(value).capitalize() + ": " + str(finaldict[value]))
-        keys = ["Change Roles", "Change Bio", "Delete", "Quit"]
+                print(str(metaDict["titleMappings"][value]) + ": " + str(finaldict[value]))
+        keys = list(metaDict["inputMappings"].keys())
+        keys.append("Quit")
         while not done:
             done, userinput = optionfield(keys)
         userinput = indexDataProcessor(keys, userinput)
-        if userinput.lower() == "change roles":
-            if "roles" in finaldict.keys():
-                finaldict["roles"] = str(modifyroles(stringListToList(finaldict["roles"])))
-            else:
-                finaldict["roles"] = str(modifyroles())
-            newdict = getMember(targetitem)
-            newdict["roles"] = str(finaldict["roles"])
-            r.hmset(targetitem, newdict)
-        elif userinput.lower() == "change bio":
-            if "bio" in finaldict.keys():
-                finaldict["bio"] = modifybio(finaldict["bio"])
-            else:
-                finaldict["bio"] = modifybio()
-            newdict = getMember(targetitem)
-            newdict["bio"] = finaldict["bio"]
-            r.hmset(targetitem, newdict)
-        if userinput.lower() == "delete":
+        if userinput in metaDict["inputMappings"]:
+            selectedItem = metaDict["inputMappings"][userinput]
+            targetType = metaDict["typeMap"][selectedItem]
+            itemTitle = metaDict["titleMappings"][selectedItem]
+            if targetType == "list":
+                if selectedItem in finaldict.keys():
+                    finaldict[selectedItem] = str(modifyList(itemTitle, stringListToList(finaldict[selectedItem])))
+                else:
+                    finaldict[selectedItem] = str(modifyList(itemTitle))
+                newdict = getDict(selectedItem)
+                newdict[selectedItem] = str(finaldict[selectedItem])
+                r.hmset(targetitem, newdict)
+            elif targetType == "string":
+                if selectedItem in finaldict.keys():
+                    finaldict[selectedItem] = modifyString(itemTitle, finaldict[selectedItem])
+                else:
+                    finaldict[selectedItem] = modifyString(itemTitle)
+                newdict = getDict(targetitem)
+                newdict[selectedItem] = finaldict[selectedItem]
+                r.hmset(targetitem, newdict)
+            elif targetType == "int":
+                if selectedItem in finaldict.keys():
+                    finaldict[selectedItem] = modifyInt(itemTitle, finaldict[selectedItem])
+                else:
+                    finaldict[selectedItem] = modifyInt(itemTitle)
+                newdict = getDict(targetitem)
+                newdict[selectedItem] = finaldict[selectedItem]
+                r.hmset(targetitem, newdict)
+        elif userinput.lower() == "delete":
             if finaldict == {}:
                 print("ERROR: Cannot delete an empty item")
             else:
@@ -223,10 +295,10 @@ def modify(targetitem, new=False):
             return
 
 
-def getMember(key):
+def getDict(key):
     data = r.hgetall(key)
-    user = dictToUTF8(data)
-    return user
+    item = dictToUTF8(data)
+    return item
 
 
 def redisKeys():
@@ -238,11 +310,10 @@ def redisKeys():
 
 def select():
     while True:
-        print()
-        print("You have " + str(len(r.keys())) + " user(s) in the database.")
         keys = redisKeys()
-        if "everyone" in keys:
-            keys.remove("everyone")
+        keys = [x for x in keys if x not in hiddenKeys]
+        print()
+        print("You have " + str(len(keys)) + " item(s) in the database.")
         keys.append("Quit")
         done = False
         while not done:
@@ -251,12 +322,47 @@ def select():
         if targetitem.lower() == "quit":
             print()
             return
-        modify(targetitem)
+        # Wish there was a better way to do this but Redis is complete garbage
+        if len(targetitem) == 18 and targetitem.isnumeric():
+            modify(targetitem, userDict)
+        else:
+            modify(targetitem, reactionDict)
 
 
 def add():
-    userinput = input("Enter the user ID you would like to put in the database: >>> ")
-    modify(str(userinput), new=True)
+    keys = ["User", "Reaction Limit", "Quit"]
+    done = False
+    while not done:
+        done, userinput = optionfield(keys)
+    itemType = indexDataProcessor(keys, userinput)
+    if itemType.lower() == "user":
+        while True:
+            userinput = input("Enter the user ID you would like to put in the database: >>> ")
+            if not userinput.isnumeric() or not len(userinput) == 18:
+                print("Enter a valid user ID!")
+                continue
+            modify(str(userinput), userDict, new=True)
+    elif itemType.lower() == "reaction limit":
+        while True:
+            userinput = input("Enter a descriptive title: >>> ")
+            if userinput in hiddenKeys:
+                print("That name cannot be used!")
+                continue
+            modify(str(userinput), reactionDict, new=True)
+            break
+    else:
+        return
+
+
+def getPolls():
+    keys = redisKeys()
+    polls = {}
+    for item in keys:
+        if not len(item) == 18 and not item.isnumeric() and item not in hiddenKeys:
+            itemDict = getDict(item)
+            item = {item: itemDict}
+            polls.update(item)
+    return polls
 
 
 def getList(key):
@@ -265,13 +371,41 @@ def getList(key):
     return rolelist
 
 
-def everyoneroles():
-    if "everyone" in redisKeys():
-        rolelist = getList("everyone")
+def enforceRoles():
+    keys = ["Enforce Roles", "Enforce Role Permissions", "Quit"]
+    done = False
+    while not done:
+        done, userinput = optionfield(keys)
+    userinput = indexDataProcessor(keys, userinput)
+    if userinput.lower() == "enforce roles":
+        if "everyone" in redisKeys():
+            rolelist = getList("everyone")
+        else:
+            rolelist = []
+        r.set("everyone", str(modifyList("Enforced Roles", rolelist)))
+        print()
+    elif userinput.lower() == "enforce role permissions":
+        keys = ["Ban Roles from Reacting", "Allow Roles through Banned Role Limits", "Quit"]
+        done = False
+        while not done:
+            done, userinput = optionfield(keys)
+        userinput = indexDataProcessor(keys, userinput)
+        if userinput.lower() == "ban roles from reacting":
+            if "reactBan" in redisKeys():
+                roleList = getList("reactBan")
+            else:
+                roleList = []
+            r.set("reactBan", str(modifyList("Banned Roles", roleList)))
+            print()
+        elif userinput.lower() == "allow roles through banned role limits":
+            if "reactPass" in redisKeys():
+                roleList = getList("reactPass")
+            else:
+                roleList = []
+            r.set("reactPass", str(modifyList("Passthrough Roles", roleList)))
+            print()
     else:
-        rolelist = []
-    r.set("everyone", str(modifyroles(rolelist)))
-    print()
+        return
 
 
 def welcome():
@@ -287,7 +421,7 @@ def welcome():
         elif targetitem.lower() == "add":
             add()
         elif targetitem.lower() == "enforce roles":
-            everyoneroles()
+            enforceRoles()
         elif targetitem.lower() == "control bot":
             token = config["token"]
             client.run(token)

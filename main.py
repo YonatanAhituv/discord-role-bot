@@ -9,7 +9,7 @@ with open('config.json', 'r') as configfile:
     config = json.loads(configfile.read())
 
 redis = False
-if config["assignedroles"]["db"] or config["bio"]["enabled"] or config["mee6"]["enabled"]:
+if config["assignedroles"]["db"] or config["bio"]["enabled"] or config["mee6"]["enabled"] or config["reactionlimits"]["db"]:
     redis = True
     import db
 
@@ -54,7 +54,7 @@ class roleBot(discord.Client):
             if levels[item] < config["mee6"]["level"]:
                 levels.pop(item)
                 continue
-            user = db.getMember(item)
+            user = db.getDict(item)
             if "roles" not in user.keys():
                 user["roles"] = []
             else:
@@ -236,25 +236,44 @@ class roleBot(discord.Client):
         else:
             await message.delete()
 
-    async def on_raw_reaction_add(self, payload):
-        if not config["reactionlimits"]["enabled"]:
-            return
+    async def reactionHandler(self, payload):
         server = client.guilds[0]
         member = discord.utils.get(server.members, id=int(payload.user_id))
         memberRoles = []
         for role in member.roles:
             memberRoles.append(role.name)
+        if config["reactionlimits"]["db"]:
+            bannedRoles = db.getList("reactBan")
+            bypassRoles = db.getList("reactPass")
+            polls = db.getPolls()
+        else:
+            requestedItems = ["bannedroles", "bypassroles", "polls"]
+            output = {}
+            for item in requestedItems:
+                if item in config["reactionlimits"].keys():
+                    output[item] = config["reactionlimits"][item]
+                else:
+                    output[item] = []
+            bannedRoles = output["bannedroles"]
+            bypassRoles = output["bypassroles"]
+            polls = output["polls"]
+            if polls == []:
+                polls = {}
         targetpoll = {}
-        if any(elem in config["reactionlimits"]["bannedroles"] for elem in memberRoles) and not any(elem in config["reactionlimits"]["bypassroles"] for elem in memberRoles):
+        if any(elem in bannedRoles for elem in memberRoles) and not any(elem in bypassRoles for elem in memberRoles):
             targetpoll["reactionchannel"] = str(payload.channel_id)
             targetpoll["messageid"] = str(payload.message_id)
             targetpoll["limit"] = 0
-        elif "polls" in config["reactionlimits"].keys():
-            for poll in config["reactionlimits"]["polls"]:
-                if str(payload.message_id) == config["reactionlimits"]["polls"][poll]["messageid"] and str(payload.channel_id) == config["reactionlimits"]["polls"][poll]["reactionchannel"]:
-                    targetpoll = config["reactionlimits"]["polls"][poll]
+        elif polls != {}:
+            for poll in polls:
+                poll = polls[poll]
+                if str(payload.message_id) == poll["messageid"] and str(payload.channel_id) == poll["reactionchannel"]:
+                    targetpoll = poll
         if targetpoll == {}:
             return
+        if config["reactionlimits"]["db"]:
+            # Redis is so bad that it can't even store integers for some reason
+            targetpoll["limit"] = int(targetpoll["limit"])
         for channel in server.channels:
             if str(channel.id) == targetpoll["reactionchannel"]:
                 reactionMessage = await channel.fetch_message(targetpoll["messageid"])
@@ -269,9 +288,19 @@ class roleBot(discord.Client):
             for userID in userIDList:
                 if payload.user_id == userID:
                     i += 1
-            if i > targetpoll["limit"] or (any(elem in targetpoll["bannedroles"] for elem in memberRoles) and not any(elem in targetpoll["bypassroles"] for elem in memberRoles)):
+            req = False
+            if "bypassroles" not in targetpoll.keys():
+                targetpoll["bypassroles"] = []
+            if "bannedroles" in targetpoll.keys():
+                req = (all(elem in targetpoll["bannedroles"] for elem in memberRoles) and not all(elem in targetpoll["bypassroles"] for elem in memberRoles))
+            if i > targetpoll["limit"] or req:
                 for reaction in reactionMessage.reactions:
                     await reaction.remove(member)
+
+    async def on_raw_reaction_add(self, payload):
+        if not config["reactionlimits"]["enabled"]:
+            return
+        await self.reactionHandler(payload)
 
     async def complain(self, message):
         if config["complaints"]["anonymized"]:
@@ -293,7 +322,7 @@ class roleBot(discord.Client):
             memberid = str(message.author.id)
             bio = message.content.replace(config["commandprefix"] + "bio set ", "")
             await message.delete()
-            user = db.getMember(memberid)
+            user = db.getDict(memberid)
             user["bio"] = bio
             r.hmset(memberid, user)
             await self.log("Added new bio, key is: " + str(memberid) + " and bio is: " + str(bio))
@@ -305,7 +334,7 @@ class roleBot(discord.Client):
             userid = msglist[2].replace("<@", "").replace("!", "").replace(">", "")
             await self.log("Getting " + str(userid) + "'s bio...")
             try:
-                bio = db.getMember(userid)
+                bio = db.getDict(userid)
                 bio = bio["bio"]
             except (AttributeError, KeyError):
                 await message.delete()
@@ -375,7 +404,7 @@ class roleBot(discord.Client):
     async def dbRoleAssign(self, member=None, message=None):
         if message is not None:
             member = message.author
-        user = db.getMember(str(member.id))
+        user = db.getDict(str(member.id))
         isMember = "roles" in user.keys()
         isEveryone = "everyone" in db.redisKeys()
         if isMember or isEveryone:

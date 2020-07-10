@@ -89,12 +89,13 @@
         "levelrole": "Example Role"
     },
     "reactionlimits": {
-        "comment": "WARNING: This module is currently expiremental and will be expanded in the future,",
-
         "comment": "This module limits reactions on a specififed message,",
         "comment": "When this module detects more than n reactions on a message by one user",
         "comment": "It removes all of their reactions",
         "enabled": true,
+
+        "comment": "Sets if the bot should retrieve reaction limit configuration from the database or JSON",
+        "db": false,
 
         "comment": "Completely blocks specififed roles from reacting to messages",
         "bannedroles": ["BannedRole"],
