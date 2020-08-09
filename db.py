@@ -2,6 +2,8 @@ import redis
 import urllib.parse as urlparse
 import json
 import discord
+import random
+import string
 
 with open('config.json', 'r') as configfile:
     config = json.loads(configfile.read())
@@ -67,6 +69,7 @@ class MyClient(discord.Client):
 Commands:
 * !switch - Switch channels
 * !delete - Delete a message
+* !survey - Create a survey
 * !quit - Return to main menu"""
         print(info)
         while True:
@@ -93,6 +96,58 @@ Commands:
                                         elif userinput == "!delete":
                                             messageID = input("Message ID: >>> ")
                                             await self.deleteMessage(messageID, targetChannel)
+                                        elif userinput == "!survey":
+                                            title = input("Survey Title: >>> ")
+                                            i = 1
+                                            contents = ""
+                                            print("--Survey Contents--")
+                                            print("Type EOF when done")
+                                            while True:
+                                                userinput = input(str(i)+": ")
+                                                if userinput == "EOF":
+                                                    contents = contents[:-1]
+                                                    break
+                                                contents += userinput + "\n" 
+                                                i += 1
+                                            print("Comma seperate each reaction, like so: 🇦,🇧, 🇨,🇩. If you'd like to use the alphabet, place the number of letters you would like instead.")
+                                            while True:
+                                                reactions = input("Reactions: >>> ")
+                                                if reactions.isnumeric():
+                                                    reactions = int(reactions)
+                                                    reactions = ["🇦", "🇧", "🇨", "🇩", "🇪", "🇫", "🇬", "🇭", "🇮", "🇯", "🇰", "🇱", "🇲", "🇳", "🇴", "🇵", "🇶", "🇷", "🇸", "🇹"][:reactions]
+                                                    break
+                                                else:
+                                                    reactions = reactions.split(',')
+                                                    if len(reactions) > 0:
+                                                        break
+                                                    else:
+                                                        print("Invalid Input!")
+                                            while True:
+                                                userinput = input("Would you like to place reaction limits on this survey? [Y/n]: >>> ")
+                                                if userinput.lower() == "y":
+                                                    reactionLimits = True
+                                                    break
+                                                elif userinput.lower() == "n":
+                                                    reactionLimits = False
+                                                    break
+                                            em = discord.Embed(title=title, description=contents)
+                                            msg = await targetChannel.send(embed=em)
+                                            for emoji in reactions:
+                                                await msg.add_reaction(emoji)
+                                            if reactionLimits:
+                                                while True:
+                                                    title = "Survey: "
+                                                    for item in range(1, 10):
+                                                        title += random.choice(string.ascii_letters)
+                                                    if item not in redisKeys():
+                                                        break
+                                                reactionLimit = {
+                                                    "reactionchannel": str(msg.channel.id),
+                                                    "messageid": str(msg.id)
+
+                                                }
+                                                r.hmset(title, reactionLimit)
+                                                modify(title, reactionDict)
                                         elif userinput == "!quit":
                                             await client.logout()
                                         else:
@@ -246,6 +301,7 @@ def modify(targetitem, metaDict, new=False):
             for value in finaldict:
                 print(str(metaDict["titleMappings"][value]) + ": " + str(finaldict[value]))
         keys = list(metaDict["inputMappings"].keys())
+        keys.append("Delete")
         keys.append("Quit")
         while not done:
             done, userinput = optionfield(keys)
