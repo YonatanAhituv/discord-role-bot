@@ -73,96 +73,116 @@ Commands:
 * !quit - Return to main menu"""
         print(info)
         while True:
-            categoryName = input("Pick a category: >>> ")
-            for server in client.guilds:
-                for category in server.channels:
-                    if str(category.type) == "category":
-                        if category.name.lower() == categoryName.lower():
+            categoryName = input("Pick a category (press ENTER if none): >>> ")
+            noCat = False
+            if categoryName == "":
+                noCat = True
+            server = client.guilds[0]
+            for category in server.channels:
+                if str(category.type) == "category" or noCat:
+                    if category.name.lower() == categoryName.lower() or noCat:
+                        while True:
+                            found = False
                             channelName = input("Pick a channel: >>> ")
-                            for channel in category.channels:
-                                if channelName.lower() == channel.name:
-                                    targetChannel = channel
-                                    while True:
-                                        userinput = input(category.name + " -> #" + str(channel.name) + ": >>> ").replace('\\n', '\n')
-                                        if userinput == "":
-                                            continue
-                                        elif userinput == "!switch":
-                                            break
-                                        elif userinput == "!leave":
-                                            currentGuild = None
-                                            for guild in client.guilds:
-                                                currentGuild = guild
-                                            await self.leave_in_protest(targetChannel, currentGuild)
-                                        elif userinput == "!delete":
-                                            messageID = input("Message ID: >>> ")
-                                            await self.deleteMessage(messageID, targetChannel)
-                                        elif userinput == "!survey":
-                                            title = input("Survey Title: >>> ")
-                                            i = 1
-                                            contents = ""
-                                            print("--Survey Contents--")
-                                            print("Type EOF when done")
-                                            while True:
-                                                userinput = input(str(i)+": ")
-                                                if userinput == "EOF":
-                                                    contents = contents[:-1]
-                                                    break
-                                                contents += userinput + "\n" 
-                                                i += 1
-                                            print("Comma seperate each reaction, like so: 🇦,🇧, 🇨,🇩. If you'd like to use the alphabet, place the number of letters you would like instead.")
-                                            while True:
-                                                reactions = input("Reactions: >>> ")
-                                                if reactions.isnumeric():
-                                                    reactions = int(reactions)
-                                                    reactions = ["🇦", "🇧", "🇨", "🇩", "🇪", "🇫", "🇬", "🇭", "🇮", "🇯", "🇰", "🇱", "🇲", "🇳", "🇴", "🇵", "🇶", "🇷", "🇸", "🇹"][:reactions]
-                                                    break
-                                                else:
-                                                    reactions = reactions.split(',')
-                                                    if len(reactions) > 0:
-                                                        break
-                                                    else:
-                                                        print("Invalid Input!")
-                                            while True:
-                                                userinput = input("Would you like to place reaction limits on this survey? [Y/n]: >>> ")
-                                                if userinput.lower() == "y":
-                                                    reactionLimits = True
-                                                    break
-                                                elif userinput.lower() == "n":
-                                                    reactionLimits = False
-                                                    break
-                                            em = discord.Embed(title=title, description=contents)
-                                            msg = await targetChannel.send(embed=em)
-                                            for emoji in reactions:
-                                                await msg.add_reaction(emoji)
-                                            if reactionLimits:
-                                                while True:
-                                                    title = "Survey: "
-                                                    for item in range(1, 10):
-                                                        title += random.choice(string.ascii_letters)
-                                                    if item not in redisKeys():
-                                                        break
-                                                reactionLimit = {
-                                                    "reactionchannel": str(msg.channel.id),
-                                                    "messageid": str(msg.id)
+                            if noCat:
+                                for channel in server.channels:
+                                    if channel.name == channelName.lower() and channel.category_id is None:
+                                        targetChannel = channel
+                                        found = True
+                                        break
+                            else:
+                                for channel in category.channels:
+                                    if channelName.lower() == channel.name:
+                                        targetChannel = channel
+                                        found = True
+                                        break
+                            if found:
+                                break
+                        break
+            while True:
+                prefix = ""
+                if not noCat:
+                    prefix = category.name + " -> "
+                userinput = input(prefix + "#" + str(targetChannel.name) + ": >>> ").replace('\\n', '\n')
+                if userinput == "":
+                    continue
+                elif userinput == "!switch":
+                    break
+                elif userinput == "!leave":
+                    currentGuild = None
+                    for guild in client.guilds:
+                        currentGuild = guild
+                    await self.leave_in_protest(targetChannel, currentGuild)
+                elif userinput == "!delete":
+                    messageID = input("Message ID: >>> ")
+                    await self.deleteMessage(messageID, targetChannel)
+                elif userinput == "!survey":
+                    title = input("Survey Title: >>> ")
+                    i = 1
+                    contents = ""
+                    print("--Survey Contents--")
+                    print("Type EOF when done")
+                    while True:
+                        userinput = input(str(i) + ": ")
+                        if userinput == "EOF":
+                            contents = contents[:-1]
+                            break
+                        contents += userinput + "\n"
+                        i += 1
+                    print("Comma seperate each reaction, like so: 🇦,🇧, 🇨,🇩. If you'd like to use the alphabet, place the number of letters you would like instead.")
+                    while True:
+                        reactions = input("Reactions: >>> ")
+                        if reactions.isnumeric():
+                            reactions = int(reactions)
+                            reactions = ["🇦", "🇧", "🇨", "🇩", "🇪", "🇫", "🇬", "🇭", "🇮", "🇯", "🇰", "🇱", "🇲", "🇳", "🇴", "🇵", "🇶", "🇷", "🇸", "🇹"][:reactions]
+                            break
+                        else:
+                            reactions = reactions.split(',')
+                            if len(reactions) > 0:
+                                break
+                            else:
+                                print("Invalid Input!")
+                    while True:
+                        userinput = input("Would you like to place reaction limits on this survey? [Y/n]: >>> ")
+                        if userinput.lower() == "y":
+                            reactionLimits = True
+                            break
+                        elif userinput.lower() == "n":
+                            reactionLimits = False
+                            break
+                    em = discord.Embed(title=title, description=contents)
+                    msg = await targetChannel.send(embed=em)
+                    for emoji in reactions:
+                        await msg.add_reaction(emoji)
+                    if reactionLimits:
+                        while True:
+                            title = "Survey: "
+                            for item in range(1, 10):
+                                title += random.choice(string.ascii_letters)
+                            if item not in redisKeys():
+                                break
+                        reactionLimit = {
+                            "reactionchannel": str(msg.channel.id),
+                            "messageid": str(msg.id)
 
-                                                }
-                                                r.hmset(title, reactionLimit)
-                                                modify(title, reactionDict)
-                                        elif userinput == "!quit":
-                                            await client.logout()
-                                        else:
-                                            if "@" in userinput:
-                                                mentionSplitList = userinput.split(" ")
-                                                mentionList = []
-                                                for word in mentionSplitList:
-                                                    if word[0] == "@":
-                                                        mentionList.append(word)
-                                                for mention in mentionList:
-                                                    for member in server.members:
-                                                        if mention.replace("@", "").lower() == member.name.split("#", 3)[0].lower() or mention.replace("@", "").lower() == str(member.nick).split("#", 3)[0].lower():
-                                                            userinput = userinput.replace(mention, "<@" + str(member.id) + ">")
-                                                            break
-                                            await targetChannel.send(userinput)
+                        }
+                        r.hmset(title, reactionLimit)
+                        modify(title, reactionDict)
+                elif userinput == "!quit":
+                    await client.logout()
+                else:
+                    if "@" in userinput:
+                        mentionSplitList = userinput.split(" ")
+                        mentionList = []
+                        for word in mentionSplitList:
+                            if word[0] == "@":
+                                mentionList.append(word)
+                        for mention in mentionList:
+                            for member in server.members:
+                                if mention.replace("@", "").lower() == member.name.split("#", 3)[0].lower() or mention.replace("@", "").lower() == str(member.nick).split("#", 3)[0].lower():
+                                    userinput = userinput.replace(mention, "<@" + str(member.id) + ">")
+                                    break
+                    await targetChannel.send(userinput)
 
     async def on_ready(self):
         print('Logged in as ' + self.user.name)
