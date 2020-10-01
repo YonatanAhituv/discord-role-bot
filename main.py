@@ -186,6 +186,12 @@ class roleBot(discord.Client):
         em = discord.Embed(title="**All Commands**", description=helpmessage)
         await message.channel.send(embed=em)
 
+    async def checkForBannedWord(self, msg):
+        for word in config["bannedwords"]["bannedwords"]:
+            if word.lower() in msg.lower():
+                return True
+        return False
+
     async def on_message(self, message):
         if message.author.id == self.user.id:
             return
@@ -205,36 +211,39 @@ class roleBot(discord.Client):
             return
         if str(message.author.id) == "159985870458322944" and config["mee6"]["enabled"] and message.channel.name == config["mee6"]["levelchannel"]:
             await self.assignLevels()
-        if "new member" not in [role.name.lower() for role in message.author.roles]:
-            if config["matchmaking"]["enabled"] and message.content == config["commandprefix"] + "matchmake":
-                await message.delete()
-                if not matchmaking:
-                    em = discord.Embed(title="STATUS", description="\nMatchmaking " + message.author.mention + "...")
-                    statusmsg = await message.channel.send(embed=em)
-                    try:
-                        await self.matchmake(message.author)
-                    except (KeyError, discord.errors.HTTPException, AttributeError) as e:
-                        await self.log("ERROR\n" + str(e))
-                        await self.cancelmatchmake("\nSomething went wrong. Try again later.")
-                    await statusmsg.delete()
-                else:
-                    em = discord.Embed(title="ERROR", description="\nAlready matchmaking someone else, please try again soon!")
-                    statusmsg = await message.channel.send(embed=em)
-                    sleep(2)
-                    await statusmsg.delete()
-            elif config["assignedroles"]["enabled"] and message.content == config["commandprefix"] + "roleassign":
-                await message.delete()
-                await self.roleassign(message=message)
-            elif message.content == config["commandprefix"] + "help":
-                await self.helpmessage(message)
-            else:
-                msglist = message.content.split()
-                if config["complaints"]["enabled"] and len(msglist) > 0 and msglist[0] == config["commandprefix"] + "complain":
-                    await self.complain(message)
-                elif config["bio"]["enabled"] and len(msglist) >= 3 and msglist[0] == config["commandprefix"] + "bio":
-                    await self.bio(message, msglist)
-        else:
+        if "new member" in [role.name.lower() for role in message.author.roles]:
             await message.delete()
+            return
+        if config["matchmaking"]["enabled"] and message.content == config["commandprefix"] + "matchmake":
+            await message.delete()
+            if not matchmaking:
+                em = discord.Embed(title="STATUS", description="\nMatchmaking " + message.author.mention + "...")
+                statusmsg = await message.channel.send(embed=em)
+                try:
+                    await self.matchmake(message.author)
+                except (KeyError, discord.errors.HTTPException, AttributeError) as e:
+                    await self.log("ERROR\n" + str(e))
+                    await self.cancelmatchmake("\nSomething went wrong. Try again later.")
+                await statusmsg.delete()
+            else:
+                em = discord.Embed(title="ERROR", description="\nAlready matchmaking someone else, please try again soon!")
+                statusmsg = await message.channel.send(embed=em)
+                sleep(2)
+                await statusmsg.delete()
+        elif config["assignedroles"]["enabled"] and message.content == config["commandprefix"] + "roleassign":
+            await message.delete()
+            await self.roleassign(message=message)
+        elif config["bannedwords"]["enabled"] and config["bannedwords"]["messagebanning"]:
+            if await self.checkForBannedWord(message.content):
+                await message.delete()
+        elif message.content == config["commandprefix"] + "help":
+            await self.helpmessage(message)
+        else:
+            msglist = message.content.split()
+            if config["complaints"]["enabled"] and len(msglist) > 1 and msglist[0] == config["commandprefix"] + "complain":
+                await self.complain(message)
+            elif config["bio"]["enabled"] and len(msglist) >= 3 and msglist[0] == config["commandprefix"] + "bio":
+                await self.bio(message, msglist)
 
     async def reactionHandler(self, payload):
         server = client.guilds[0]
@@ -501,6 +510,26 @@ class roleBot(discord.Client):
         await self.log("Timed out")
         await self.cancelmatchmake("\nTimed out! You took too long to respond to the questions (2 minutes).")
 
+    async def getMessageReactions(self, msg, messageauthor, name, emojis, response):
+        found = False
+        for reaction in msg.reactions:
+            users = await reaction.users().flatten()
+            for user in users:
+                if messageauthor.id == user.id:
+                    found = True
+            if not found:
+                continue
+            if config["matchmaking"]["questions"][name]["reactiontype"] == "custom":
+                emojisName = []
+                for item in emojis:
+                    emojisName.append(item.name)
+                if str(reaction.emoji.name) in emojisName:
+                    response.append(str(reaction.emoji.name))
+            else:
+                if str(reaction) in emojis:
+                    response.append(str(reaction))
+        return response
+
     async def matchmake(self, member):
         await self.log("Matchmaking:\n" + str(member))
         global matchmaking
@@ -611,16 +640,21 @@ class roleBot(discord.Client):
                         await msg.add_reaction(emoji)
                     checkedValue = emojis
                     if config["matchmaking"]["questions"][name]["questiontype"] == "single":
-                        try:
-                            res = await client.wait_for('reaction_add', check=self.emojicheck, timeout=120)
-                        except asyncio.TimeoutError:
-                            res = None
-                            returnval = await self.timeout()
-                            if returnval:
-                                break
-                            if not returnval:
-                                return
-                        res = res[0]
+                        response = []
+                        response = await self.getMessageReactions(msg, messageauthor, name, emojis, response)
+                        if len(response) > 0:
+                            res = response[0]
+                        else:
+                            try:
+                                res = await client.wait_for('reaction_add', check=self.emojicheck, timeout=120)
+                            except asyncio.TimeoutError:
+                                res = None
+                                returnval = await self.timeout()
+                                if returnval:
+                                    break
+                                if not returnval:
+                                    return
+                            res = res[0]
                         answerIndex = []
                         if config["matchmaking"]["questions"][name]["reactiontype"] == "custom":
                             res = res.emoji.name
@@ -632,9 +666,14 @@ class roleBot(discord.Client):
                             await self.log("Emoji at index:\n" + str(answerIndex))
                             break
                     if config["matchmaking"]["questions"][name]["questiontype"] == "multiple":
-                        await msg.add_reaction("✅")
                         response = []
                         answerIndex = []
+                        for server in client.guilds:
+                            for channel in server.channels:
+                                if channel.name == config["matchmaking"]["welcomechannel"]:
+                                    msg = await channel.fetch_message(msg.id)
+                        response = await self.getMessageReactions(msg, messageauthor, name, emojis, response)
+                        await msg.add_reaction("✅")
                         while True:
                             try:
                                 await self.log("Waiting for reaction...")
@@ -733,6 +772,20 @@ class roleBot(discord.Client):
                         await msg.delete()
                     except NameError:
                         pass
+
+    async def on_member_update(self, before, after):
+        if await self.checkForBannedWord(str(after.nick).split("#", 3)[0].lower()):
+            try:
+                await after.edit(nick=config["bannedwords"]["replacementnick"])
+            except discord.errors.Forbidden:
+                pass
+
+    async def on_user_update(self, before, after):
+        if await self.checkForBannedWord(after.name.split("#", 3)[0].lower()):
+            try:
+                await after.edit(nick=config["bannedwords"]["replacementnick"])
+            except discord.errors.Forbidden:
+                pass
 
 
 client = roleBot()

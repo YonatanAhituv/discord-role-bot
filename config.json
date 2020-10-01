@@ -124,6 +124,24 @@
             }
         }
     },
+    "bannedwords": {
+        "comment": "EXPIRMENTAL: This will eventually move to the database", 
+        "comment": "This module enables basic word banning functionality from nicknames and message,",
+        "commnet": "It will delete messages or change nicknames if it detects the direct usage of a banned string (of any character case)",
+        "enabled": true,
+
+        "comment": "Enables if the bot should or should not delete messages that contain banned words",
+        "messagebanning": true,
+
+        "comment": "Enables if the bot should or not not change nicknames that contain banned words",
+        "nickbanning": true,
+
+        "comment": "Sets the repalcmeent nickname to place on nicknames or usernames that contain banned words",
+        "replacementnick": "Scary Nickname",
+
+        "comment": "Sets the banned words the bot should look for (words should be lowercase)",
+        "bannedwords": ["Scary Word"]    
+    },
     "matchmaking": {
         "comment": "This module asks questions and assigns roles based on the answers",
         "comment": "Tells the bot if you want this module enabled or not",
