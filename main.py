@@ -9,7 +9,13 @@ with open('config.json', 'r') as configfile:
     config = json.loads(configfile.read())
 
 redis = False
-if config["assignedroles"]["db"] or config["bio"]["enabled"] or config["mee6"]["enabled"] or config["reactionlimits"]["db"]:
+assignedRoles = False
+reactionLimits = False
+if config["assignedroles"]["enabled"]:
+    assignedRoles = config["assignedroles"]["db"]
+if config["reactionlimits"]["enabled"]:
+    reactionLimits = config["reactionlimits"]["db"]
+if assignedRoles or config["bio"]["enabled"] or config["mee6"]["enabled"] or reactionLimits:
     redis = True
     import db
 
@@ -233,9 +239,10 @@ class roleBot(discord.Client):
         elif config["assignedroles"]["enabled"] and message.content == config["commandprefix"] + "roleassign":
             await message.delete()
             await self.roleassign(message=message)
-        elif config["bannedwords"]["enabled"] and config["bannedwords"]["messagebanning"]:
-            if await self.checkForBannedWord(message.content):
-                await message.delete()
+        elif config["bannedwords"]["enabled"]:
+            if config["bannedwords"]["messagebanning"]:
+                if await self.checkForBannedWord(message.content):
+                    await message.delete()
         elif message.content == config["commandprefix"] + "help":
             await self.helpmessage(message)
         else:
@@ -773,19 +780,20 @@ class roleBot(discord.Client):
                     except NameError:
                         pass
 
+    async def nickCleaner(self, before, after):
+        if config["bannedwords"]["enabled"]:
+            if config["bannedwords"]["nickbanning"]:
+                if await self.checkForBannedWord(str(after.nick).split("#", 3)[0].lower()):
+                    try:
+                        await after.edit(nick=config["bannedwords"]["replacementnick"])
+                    except discord.errors.Forbidden:
+                        pass
+
     async def on_member_update(self, before, after):
-        if await self.checkForBannedWord(str(after.nick).split("#", 3)[0].lower()):
-            try:
-                await after.edit(nick=config["bannedwords"]["replacementnick"])
-            except discord.errors.Forbidden:
-                pass
+        await self.nickCleaner(before, after)
 
     async def on_user_update(self, before, after):
-        if await self.checkForBannedWord(after.name.split("#", 3)[0].lower()):
-            try:
-                await after.edit(nick=config["bannedwords"]["replacementnick"])
-            except discord.errors.Forbidden:
-                pass
+        await self.nickCleaner(before, after)
 
 
 client = roleBot()
