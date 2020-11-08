@@ -239,10 +239,6 @@ class roleBot(discord.Client):
         elif config["assignedroles"]["enabled"] and message.content == config["commandprefix"] + "roleassign":
             await message.delete()
             await self.roleassign(message=message)
-        elif config["bannedwords"]["enabled"]:
-            if config["bannedwords"]["messagebanning"]:
-                if await self.checkForBannedWord(message.content):
-                    await message.delete()
         elif message.content == config["commandprefix"] + "help":
             await self.helpmessage(message)
         else:
@@ -251,6 +247,10 @@ class roleBot(discord.Client):
                 await self.complain(message)
             elif config["bio"]["enabled"] and len(msglist) >= 3 and msglist[0] == config["commandprefix"] + "bio":
                 await self.bio(message, msglist)
+            elif config["bannedwords"]["enabled"]:
+                if config["bannedwords"]["messagebanning"]:
+                    if await self.checkForBannedWord(message.content):
+                        await message.delete()
 
     async def reactionHandler(self, payload):
         server = client.guilds[0]
