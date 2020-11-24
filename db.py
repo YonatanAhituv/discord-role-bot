@@ -178,7 +178,7 @@ Commands:
                             if word[0] == "@":
                                 mentionList.append(word)
                         for mention in mentionList:
-                            for member in server.members:
+                            for member in client.guilds[0].members:
                                 if mention.replace("@", "").lower() == member.name.split("#", 3)[0].lower() or mention.replace("@", "").lower() == str(member.nick).split("#", 3)[0].lower():
                                     userinput = userinput.replace(mention, "<@" + str(member.id) + ">")
                                     break
@@ -507,5 +507,6 @@ def welcome():
 
 r = redisInit()
 if __name__ == "__main__":
-    client = MyClient()
+    intents = discord.Intents(messages=True, guilds=True, members=True, bans=True, emojis=True, integrations=True, webhooks=True, invites=True, voice_states=True, presences=True, guild_messages=True, dm_messages=True, reactions=True, guild_reactions=True, dm_reactions=True, typing=True, guild_typing=True, dm_typing=True)
+    client = MyClient(intents=intents)
     welcome()

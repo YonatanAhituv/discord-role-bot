@@ -5,7 +5,7 @@ verify_ssl = true
 
 [packages]
 
-"discord.py" = "==1.3.4"
+"discord.py" = "==1.5.1"
 
 "colorama" = "==0.4.1"
 
@@ -14,4 +14,4 @@ verify_ssl = true
 "requests" = "==2.20.1"
 
 [requires]
-python_version = "3.7.6"
+python_version = "3.9.0"

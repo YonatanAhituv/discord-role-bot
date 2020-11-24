@@ -796,5 +796,6 @@ class roleBot(discord.Client):
         await self.nickCleaner(before, after)
 
 
-client = roleBot()
+intents = discord.Intents(messages=True, guilds=True, members=True, bans=True, emojis=True, integrations=True, webhooks=True, invites=True, voice_states=True, presences=True, guild_messages=True, dm_messages=True, reactions=True, guild_reactions=True, dm_reactions=True, typing=True, guild_typing=True, dm_typing=True)
+client = roleBot(intents=intents)
 client.run(token)
