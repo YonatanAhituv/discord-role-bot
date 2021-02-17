@@ -65,40 +65,63 @@ class MyClient(discord.Client):
         await msg.delete()
 
     async def manage(self):
-        info = """Welcome to Discord Bot Control.
+        while True:
+            info = """Welcome to Discord Bot Control.
 Commands:
 * !switch - Switch channels
 * !delete - Delete a message
 * !survey - Create a survey
-* !quit - Return to main menu"""
-        print(info)
-        while True:
-            categoryName = input("Pick a category (press ENTER if none): >>> ")
-            noCat = False
-            if categoryName == "":
-                noCat = True
-            server = client.guilds[0]
-            for category in server.channels:
-                if str(category.type) == "category" or noCat:
-                    if category.name.lower() == categoryName.lower() or noCat:
-                        while True:
-                            found = False
-                            channelName = input("Pick a channel: >>> ")
-                            if noCat:
-                                for channel in server.channels:
-                                    if channel.name == channelName.lower() and channel.category_id is None:
-                                        targetChannel = channel
-                                        found = True
-                                        break
-                            else:
-                                for channel in category.channels:
-                                    if channelName.lower() == channel.name:
-                                        targetChannel = channel
-                                        found = True
-                                        break
-                            if found:
-                                break
-                        break
+* !quit - Return to main menu
+* !list - Lists channels, catagories and recent messages
+* !back - Go back"""
+            print(info)
+            output = ""
+            found = False
+            while True:
+                if output != "":
+                    output = output[:-2]
+                    print("Catagories are: " + str(output))
+                output = ""
+                categoryName = input("Pick a category (press ENTER if none): >>> ")
+                noCat = False
+                if categoryName == "":
+                    noCat = True
+                server = client.guilds[0]
+                for category in server.channels:
+                    if str(category.type) == "category" and categoryName == "!list":
+                        output += str(category.name) + ", "
+                    if str(category.type) == "category" or noCat:
+                        if category.name.lower() == categoryName.lower() or noCat:
+                            while True:
+                                if output != "":
+                                    output = output[:-2]
+                                    print("Channels are: " + str(output))
+                                output = ""
+                                found = False
+                                channelName = input("Pick a channel: >>> ").replace("#", "")
+                                if channelName.lower() == "!back":
+                                    break
+                                if noCat:
+                                    for channel in server.channels:
+                                        if channelName == "!list":
+                                            output += "#" + channel.name + ", "
+                                        if channel.name == channelName.lower() and channel.category_id is None:
+                                            targetChannel = channel
+                                            found = True
+                                            break
+                                else:
+                                    for channel in category.channels:
+                                        if channelName == "!list":
+                                            output += "#" + channel.name + ", "
+                                        if channelName.lower() == channel.name:
+                                            targetChannel = channel
+                                            found = True
+                                            break
+                                if found:
+                                    break
+                            break
+                if found:
+                    break
             while True:
                 prefix = ""
                 if not noCat:
@@ -116,6 +139,13 @@ Commands:
                 elif userinput == "!delete":
                     messageID = input("Message ID: >>> ")
                     await self.deleteMessage(messageID, targetChannel)
+                elif userinput == "!list":
+                    messages = await targetChannel.history(limit=50).flatten()
+                    output = ""
+                    for message in messages:
+                        output += str(message.author.name) + ": " + str(message.content) + "\n\n"
+                    output = output[:-1]
+                    print(str(output))
                 elif userinput == "!survey":
                     title = input("Survey Title: >>> ")
                     i = 1
