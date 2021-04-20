@@ -141,6 +141,7 @@ Commands:
                     await self.deleteMessage(messageID, targetChannel)
                 elif userinput == "!list":
                     messages = await targetChannel.history(limit=50).flatten()
+                    messages.reverse()
                     output = ""
                     for message in messages:
                         output += str(message.author.name) + ": " + str(message.content) + "\n\n"
